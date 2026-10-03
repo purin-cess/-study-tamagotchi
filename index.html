@@ -6,6 +6,7 @@
 <title>10월 공부 다마고치</title>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 <style>
 :root{--ink:#31264f;--lav:#a88de3;--lav2:#d9c8ff;--panel:#fffdf9;--line:#856fb2;--pink:#ffabc9;--mint:#d7f3e6;--yellow:#fff0b6;--soft:#f1eafb}
 *{box-sizing:border-box}
@@ -31,7 +32,7 @@ button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #b5a3d4}.g{backg
 .monitor{background:#191628;border:4px solid #5d4b87;border-radius:10px;padding:8px}
 video{width:100%;max-height:250px;object-fit:cover;background:#090811;border-radius:7px;transform:scaleX(-1)}
 .status{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:7px;color:#fff;font-weight:800}.lamp{display:inline-block;width:11px;height:11px;border-radius:50%;background:#aaa;margin-right:5px}.lamp.ok{background:#65e29a}.lamp.bad{background:#ff6f91}.lamp.wait{background:#ffd26a}
-.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}.metric{background:#f5f0ff;border:3px solid #846eb0;padding:7px;text-align:center;border-radius:7px}.metric b{display:block;font-size:18px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}@media(max-width:560px){.metrics{grid-template-columns:repeat(2,1fr)}}.metric{background:#f5f0ff;border:3px solid #846eb0;padding:7px;text-align:center;border-radius:7px}.metric b{display:block;font-size:18px}
 .badge{display:inline-block;padding:4px 6px;border:2px solid #7964a2;background:#f1eaff;margin:2px;border-radius:999px}
 </style>
 </head>
@@ -78,21 +79,33 @@ video{width:100%;max-height:250px;object-fit:cover;background:#090811;border-rad
 
 <div class="card">
   <div class="big">AI 공부 감시모드</div>
-  <div class="notice">얼굴 필요 없음. <b>상체·어깨·팔처럼 사람이 화면 안에 있는지만</b> 감지해. 영상은 저장·업로드하지 않고 브라우저 안에서만 AI 판정.</div>
+  <div class="notice">얼굴 필요 없음. <b>사람·휴대폰 객체 + 손 자세 패턴</b>을 함께 본다. 영상은 저장하지 않고 브라우저 안에서만 판정하며, 보정값도 손가락 관절 거리·각도 숫자만 저장해.</div>
   <div class="monitor">
     <video id="cam" playsinline muted></video>
     <div class="status"><span><i class="lamp wait" id="lamp"></i><span id="monitorStatus">대기중</span></span><span id="modelStatus">AI 미로딩</span></div>
   </div>
   <div class="metrics">
-    <div class="metric"><span>집중</span><b id="focusTime">0:00</b></div>
-    <div class="metric"><span>자리이탈</span><b id="awayCount">0</b></div>
-    <div class="metric"><span>앱이탈</span><b id="tabAway">0분</b></div>
+    <div class="metric"><span>집중시간</span><b id="focusTime">0:00</b></div>
+    <div class="metric"><span>딴짓시간</span><b id="distractTime">0:00</b></div>
+    <div class="metric"><span>집중률</span><b id="focusRate">--</b></div>
+    <div class="metric"><span>폰딴짓</span><b id="phoneCount">0회</b></div>
   </div>
   <div class="ctrl" style="margin-top:9px">
     <button class="g" id="startBtn" onclick="startMonitor()">감시 시작</button>
+    <button class="y" id="pauseBtn" onclick="togglePause()">⏸ 일시정지</button>
     <button class="p" onclick="stopMonitor()">종료</button>
   </div>
-  <div class="sub" style="margin-top:7px">20초 이상 사람이 안 보이면 자리이탈로 기록. 다른 앱/탭으로 나갔다가 돌아오면 이탈시간도 기록돼. iPhone에서 화면을 잠그면 카메라 판정은 중단됨.</div>
+  <div class="notice">
+    <b>손 자세 보정</b><br>
+    현재 카메라 각도에서 한 번씩 해줘. 카메라 위치를 크게 바꾸면 다시 보정하는 게 정확해.<br>
+    <div class="ctrl" style="margin-top:7px">
+      <button class="y" onclick="startCalibration('pen')">✏️ 펜으로 8초 쓰기</button>
+      <button class="y" onclick="startCalibration('phone')">📱 폰으로 8초 사용</button>
+      <button onclick="clearCalibration()">보정 초기화</button>
+    </div>
+    <div class="sub" id="calStatus" style="margin-top:5px">보정 없음</div>
+  </div>
+  <div class="sub" style="margin-top:7px">20초 이상 자리이탈 → 딴짓. 폰 패턴 10초 → 경고, 30초 → 폰을 잡기 시작한 구간부터 딴짓으로 재분류. 다른 앱/탭 이탈시간도 딴짓으로 누적. 화장실·물 뜨러 가기 같은 정상 휴식은 ⏸ 일시정지를 누르면 집중/딴짓 어느 쪽에도 기록되지 않아.</div>
 </div>
 
 <div class="card">
@@ -127,13 +140,13 @@ const pets={
   4:{name:'구름여우',e:['🥚','🦊','☁️','🌙','✨','🪽','💜']}
 };
 function phase(ds){const d=Number(ds.slice(-2));return d<=10?1:d<=17?2:d<=24?3:4}
-function fresh(){return {season:'oct2026-ai',daily:{},past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,awayCount:0,tabAwaySec:0,selected:phase(today)}}
+function fresh(){return {season:'oct2026-ai',daily:{},past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,distractSec:0,awayCount:0,phoneCount:0,tabAwaySec:0,selected:phase(today)}}
 let s=JSON.parse(localStorage.getItem(STORAGE)||'null')||fresh();
-if(!s.daily[today])s.daily[today]={past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,awayCount:0,tabAwaySec:0};
+if(!s.daily[today])s.daily[today]={past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,distractSec:0,awayCount:0,phoneCount:0,tabAwaySec:0};
 function syncKey(){return new URLSearchParams(location.hash.slice(1)).get('key')||''}
 let saveTimer;
 function save(){localStorage.setItem(STORAGE,JSON.stringify(s));render();clearTimeout(saveTimer);saveTimer=setTimeout(cloudSave,500)}
-async function cloudLoad(){const k=syncKey();if(!k){syncState.textContent='로컬모드';return}try{const r=await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'load',syncKey:k})});const j=await r.json();if(j.state&&j.state.season==='oct2026-ai'){s=j.state;if(!s.daily[today])s.daily[today]={past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,awayCount:0,tabAwaySec:0}}syncState.textContent='☁ 동기화됨';localStorage.setItem(STORAGE,JSON.stringify(s));render()}catch(e){syncState.textContent='로컬저장'}}
+async function cloudLoad(){const k=syncKey();if(!k){syncState.textContent='로컬모드';return}try{const r=await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'load',syncKey:k})});const j=await r.json();if(j.state&&j.state.season==='oct2026-ai'){s=j.state;if(!s.daily[today])s.daily[today]={past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,distractSec:0,awayCount:0,phoneCount:0,tabAwaySec:0}}syncState.textContent='☁ 동기화됨';localStorage.setItem(STORAGE,JSON.stringify(s));render()}catch(e){syncState.textContent='로컬저장'}}
 async function cloudSave(){const k=syncKey();if(!k)return;try{syncState.textContent='☁ 저장중';await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',syncKey:k,state:s})});syncState.textContent='☁ 저장완료'}catch(e){syncState.textContent='로컬저장'}}
 function adj(k,n,max=999999){const nv=Math.max(0,Math.min(max,(s[k]||0)+n)),a=nv-(s[k]||0);s[k]=nv;s.daily[today][k]=Math.max(0,(s.daily[today][k]||0)+a);save()}
 function chgPast(n){adj('past',n,592)} function chgVar(n){adj('variant',n)} function chgRecall(n){adj('recall',n)} function chgEdu(n){adj('edu',n)} function chgRead(n){adj('read',n)}
@@ -159,62 +172,191 @@ function render(){
  document.getElementById('todayMode').innerHTML=cur===1?'<b>10/3~10/10:</b> 기출 592 최우선. 그래도 인출·교육학·집중시간 전부 펫 성장에 반영!':'<b>10/11 이후:</b> 변형 + 인출 + 교육학을 주간 누적으로.';
  document.getElementById('pastToday').textContent=d.past||0;document.getElementById('varToday').textContent=d.variant||0;document.getElementById('recallToday').textContent=d.recall||0;document.getElementById('eduToday').textContent=d.edu||0;document.getElementById('readToday').textContent=d.read||0;
  document.getElementById('pastTotal').textContent=s.past;document.getElementById('pastBar').style.width=(s.past/592*100)+'%';document.getElementById('recallTotal').textContent=s.recall;document.getElementById('eduTotal').textContent=s.edu;document.getElementById('varTotal').textContent=s.variant;document.getElementById('readTotal').textContent=s.read;document.getElementById('focusTotal').textContent=Math.floor((s.focusSec||0)/60);
- document.getElementById('focusTime').textContent=fmt(d.focusSec||0);document.getElementById('awayCount').textContent=d.awayCount||0;document.getElementById('tabAway').textContent=Math.floor((d.tabAwaySec||0)/60)+'분';
+ document.getElementById('focusTime').textContent=fmt(d.focusSec||0);
+ document.getElementById('distractTime').textContent=fmt(d.distractSec||0);
+ const denom=(d.focusSec||0)+(d.distractSec||0);
+ document.getElementById('focusRate').textContent=denom?Math.round((d.focusSec||0)/denom*100)+'%':'--';
+ document.getElementById('phoneCount').textContent=(d.phoneCount||0)+'회';
 }
 document.querySelectorAll('.nav div').forEach(el=>el.onclick=()=>{s.selected=Number(el.dataset.p);save()});
 function fmt(sec){sec=Math.floor(sec);return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')}
 
-/* AI monitor: all video processing stays in-browser */
-let stream=null,model=null,monitoring=false,detectTimer=null,tickTimer=null,lastTick=0,absentSince=0,awayLatched=false,hiddenAt=0;
+/* AI monitor: video stays in-browser; only numeric hand features are stored */
+const CAL_STORAGE='oct_tama_hand_cal_v1';
+let cal=JSON.parse(localStorage.getItem(CAL_STORAGE)||'{"pen":null,"phone":null}');
+let stream=null,model=null,handsModel=null,monitoring=false,paused=false,detectTimer=null,tickTimer=null,lastTick=0;
+let absentSince=0,awayLatched=false,hiddenAt=0;
+let phoneSince=0,phoneBlocked=false,phoneLatched=false,phoneRetroDone=false;
+let lastHandFeatures=null,handUpdatedAt=0;
+let calibrationMode=null,calSamples=[],calStartedAt=0;
+
+function ensureDailyFields(){
+ const d=s.daily[today];
+ for(const k of ['focusSec','distractSec','awayCount','phoneCount','tabAwaySec']) if(d[k]==null)d[k]=0;
+ for(const k of ['focusSec','distractSec','awayCount','phoneCount','tabAwaySec']) if(s[k]==null)s[k]=0;
+}
+ensureDailyFields();
+
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y,(a.z||0)-(b.z||0))}
+function angle3(a,b,c){
+ const ux=a.x-b.x,uy=a.y-b.y,uz=(a.z||0)-(b.z||0);
+ const vx=c.x-b.x,vy=c.y-b.y,vz=(c.z||0)-(b.z||0);
+ const dot=ux*vx+uy*vy+uz*vz,nu=Math.hypot(ux,uy,uz),nv=Math.hypot(vx,vy,vz);
+ return Math.acos(Math.max(-1,Math.min(1,dot/(nu*nv+1e-8))))/Math.PI;
+}
+function handFeatures(lm){
+ const scale=Math.max(.03,dist(lm[0],lm[9])),D=(i,j)=>dist(lm[i],lm[j])/scale;
+ return [D(4,8),D(4,12),D(8,12),D(8,20),D(0,8),D(0,12),D(0,16),D(0,20),
+ angle3(lm[5],lm[6],lm[8]),angle3(lm[9],lm[10],lm[12]),angle3(lm[13],lm[14],lm[16]),
+ angle3(lm[17],lm[18],lm[20]),angle3(lm[2],lm[3],lm[4]),
+ (lm[9].x-lm[0].x)/scale,(lm[9].y-lm[0].y)/scale];
+}
+function centroid(samples){
+ if(!samples.length)return null;
+ const out=new Array(samples[0].length).fill(0);
+ for(const x of samples)for(let i=0;i<x.length;i++)out[i]+=x[i];
+ return out.map(v=>v/samples.length);
+}
+function vecDist(a,b){if(!a||!b)return Infinity;let z=0;for(let i=0;i<a.length;i++){const q=a[i]-b[i];z+=q*q}return Math.sqrt(z/a.length)}
+function updateCalStatus(){
+ const el=document.getElementById('calStatus'); if(!el)return;
+ if(calibrationMode){
+  const left=Math.max(0,8-(Date.now()-calStartedAt)/1000);
+  el.textContent=(calibrationMode==='pen'?'✏️ 펜 보정중 ':'📱 폰 보정중 ')+left.toFixed(1)+'초';
+ }else el.textContent='펜 '+(cal.pen?'✓':'미보정')+' · 폰 '+(cal.phone?'✓':'미보정');
+}
+function startCalibration(kind){
+ if(!monitoring){alert('먼저 감시 시작을 눌러 카메라를 켜줘!');return}
+ calibrationMode=kind;calSamples=[];calStartedAt=Date.now();updateCalStatus();
+}
+function clearCalibration(){cal={pen:null,phone:null};localStorage.setItem(CAL_STORAGE,JSON.stringify(cal));updateCalStatus()}
+function finishCalibration(){
+ if(!calibrationMode)return;
+ if(calSamples.length>=5){cal[calibrationMode]=centroid(calSamples);localStorage.setItem(CAL_STORAGE,JSON.stringify(cal))}
+ calibrationMode=null;calSamples=[];updateCalStatus();
+}
+function classifyHand(){
+ if(!lastHandFeatures||Date.now()-handUpdatedAt>2500||!cal.pen||!cal.phone)return {kind:'unknown',confidence:0};
+ const dp=vecDist(lastHandFeatures,cal.pen),dh=vecDist(lastHandFeatures,cal.phone),sum=dp+dh+1e-8;
+ return {kind:dh<dp?'phone':'pen',confidence:Math.abs(dp-dh)/sum};
+}
+async function initHands(){
+ if(handsModel)return;
+ handsModel=new Hands({locateFile:(f)=>'https://cdn.jsdelivr.net/npm/@mediapipe/hands/'+f});
+ handsModel.setOptions({maxNumHands:1,modelComplexity:0,minDetectionConfidence:.45,minTrackingConfidence:.45});
+ handsModel.onResults(res=>{
+  if(res.multiHandLandmarks&&res.multiHandLandmarks[0]){
+   lastHandFeatures=handFeatures(res.multiHandLandmarks[0]);handUpdatedAt=Date.now();
+   if(calibrationMode)calSamples.push(lastHandFeatures.slice());
+  }
+ });
+}
 async function startMonitor(){
  if(monitoring)return;
  try{
-  document.getElementById('modelStatus').textContent='AI 로딩중…';
+  modelStatus.textContent='AI 로딩중…';
   if(!model)model=await cocoSsd.load({base:'lite_mobilenet_v2'});
-  document.getElementById('modelStatus').textContent='AI 준비됨';
+  await initHands();
+  modelStatus.textContent='AI 준비됨';
   stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
-  const v=document.getElementById('cam');v.srcObject=stream;await v.play();
-  monitoring=true;lastTick=performance.now();setMonitor('감시중',true);
-  tickTimer=setInterval(focusTick,1000);detectLoop();
- }catch(e){setMonitor('카메라/AI 실행 실패',false);document.getElementById('modelStatus').textContent='권한 확인'}
+  cam.srcObject=stream;await cam.play();monitoring=true;lastTick=performance.now();setMonitor('감시중',true);
+  tickTimer=setInterval(focusTick,1000);detectLoop();updateCalStatus();
+ }catch(e){setMonitor('카메라/AI 실행 실패',false);modelStatus.textContent='권한 확인'}
+}
+
+function togglePause(){
+ if(!monitoring)return;
+ paused=!paused;
+ const b=document.getElementById('pauseBtn');
+ if(paused){
+  b.textContent='▶ 재개';
+  setMonitor('⏸ 일시정지 · 시간 기록 안 함',null);
+  absentSince=0;awayLatched=false;
+  phoneSince=0;phoneBlocked=false;phoneLatched=false;phoneRetroDone=false;
+ }else{
+  b.textContent='⏸ 일시정지';
+  lastTick=performance.now();
+  absentSince=0;awayLatched=false;
+  phoneSince=0;phoneBlocked=false;phoneLatched=false;phoneRetroDone=false;
+  setMonitor('재개 · 재감지중',null);
+ }
 }
 function stopMonitor(){
- monitoring=false;if(detectTimer)clearTimeout(detectTimer);if(tickTimer)clearInterval(tickTimer);
+ monitoring=false;paused=false;const pb=document.getElementById('pauseBtn');if(pb)pb.textContent='⏸ 일시정지';if(detectTimer)clearTimeout(detectTimer);if(tickTimer)clearInterval(tickTimer);
  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
- document.getElementById('cam').srcObject=null;setMonitor('종료됨',null);save()
+ cam.srcObject=null;setMonitor('종료됨',null);save()
 }
-function setMonitor(text,ok){document.getElementById('monitorStatus').textContent=text;const l=document.getElementById('lamp');l.className='lamp '+(ok===true?'ok':ok===false?'bad':'wait')}
+function setMonitor(t,ok){monitorStatus.textContent=t;lamp.className='lamp '+(ok===true?'ok':ok===false?'bad':'wait')}
+function addFocus(sec){s.focusSec=(s.focusSec||0)+sec;s.daily[today].focusSec=(s.daily[today].focusSec||0)+sec}
+function addDistract(sec){s.distractSec=(s.distractSec||0)+sec;s.daily[today].distractSec=(s.daily[today].distractSec||0)+sec}
 function focusTick(){
- if(!monitoring||document.hidden)return;
+ if(!monitoring||document.hidden||paused)return;
  const now=performance.now(),dt=Math.max(0,(now-lastTick)/1000);lastTick=now;
- if(!absentSince){s.focusSec=(s.focusSec||0)+dt;s.daily[today].focusSec=(s.daily[today].focusSec||0)+dt}
- render();
- if(Math.floor(s.focusSec)%30===0)save();
+ const away=absentSince&&((Date.now()-absentSince)/1000>=20);
+ if(phoneBlocked||away)addDistract(dt); else if(!absentSince)addFocus(dt);
+ render();updateCalStatus();
 }
 async function detectLoop(){
  if(!monitoring)return;
+ if(paused){
+  detectTimer=setTimeout(detectLoop,800);
+  return;
+ }
  try{
-  const v=document.getElementById('cam');
-  if(v.readyState>=2){
-   const preds=await model.detect(v);
-   const person=preds.some(x=>x.class==='person'&&x.score>=0.42);
-   if(person){absentSince=0;awayLatched=false;setMonitor('사람 감지 · 집중중',true)}
+  if(cam.readyState>=2){
+   const preds=await model.detect(cam);
+   await handsModel.send({image:cam}).catch(()=>{});
+   if(calibrationMode&&Date.now()-calStartedAt>=8000)finishCalibration();
+
+   const person=preds.some(x=>x.class==='person'&&x.score>=.42);
+   const phoneObj=preds.some(x=>x.class==='cell phone'&&x.score>=.28);
+   const hc=classifyHand();
+   const phone=phoneObj||(hc.kind==='phone'&&hc.confidence>=.10);
+
+   if(person){absentSince=0;awayLatched=false}
    else{
     if(!absentSince)absentSince=Date.now();
     const sec=(Date.now()-absentSince)/1000;
-    if(sec>=20&&!awayLatched){awayLatched=true;s.awayCount=(s.awayCount||0)+1;s.daily[today].awayCount=(s.daily[today].awayCount||0)+1;save()}
-    setMonitor(sec>=20?'자리이탈 감지':'잠깐 안 보임',false);
+    if(sec>=20&&!awayLatched){awayLatched=true;s.awayCount++;s.daily[today].awayCount++;addDistract(20);save()}
+   }
+
+   if(phone&&person){
+    if(!phoneSince)phoneSince=Date.now();
+    const psec=(Date.now()-phoneSince)/1000;
+    if(psec>=30){
+     phoneBlocked=true;
+     if(!phoneLatched){phoneLatched=true;s.phoneCount++;s.daily[today].phoneCount++}
+     if(!phoneRetroDone){
+      const move=Math.min(30,s.daily[today].focusSec||0);
+      s.daily[today].focusSec-=move;s.focusSec=Math.max(0,s.focusSec-move);
+      addDistract(30);phoneRetroDone=true;save();
+     }
+     setMonitor('📵 폰 사용 · 딴짓시간 기록중',false);
+    }else if(psec>=10)setMonitor('📱 폰 내려놔!! '+Math.floor(psec)+'초',false);
+    else setMonitor('폰 의심 · 관찰중 '+Math.floor(psec)+'초',null);
+   }else{
+    phoneSince=0;phoneBlocked=false;phoneLatched=false;phoneRetroDone=false;
+    if(!person){const sec=(Date.now()-absentSince)/1000;setMonitor(sec>=20?'🚪 자리이탈 · 딴짓시간 기록중':'잠깐 안 보임',false)}
+    else if(hc.kind==='pen'&&hc.confidence>=.08)setMonitor('✏️ 필기 중 · 집중',true);
+    else setMonitor('📚 자리 있음 · 집중',true);
    }
   }
- }catch(e){document.getElementById('modelStatus').textContent='AI 판정 오류'}
- detectTimer=setTimeout(detectLoop,1800);
+ }catch(e){modelStatus.textContent='AI 판정 오류'}
+ detectTimer=setTimeout(detectLoop,1200);
 }
 document.addEventListener('visibilitychange',()=>{
- if(document.hidden){hiddenAt=Date.now();if(monitoring)setMonitor('다른 앱/탭으로 이동',false)}
- else if(hiddenAt){const sec=(Date.now()-hiddenAt)/1000;hiddenAt=0;lastTick=performance.now();if(sec>=5){s.tabAwaySec=(s.tabAwaySec||0)+sec;s.daily[today].tabAwaySec=(s.daily[today].tabAwaySec||0)+sec;s.awayCount=(s.awayCount||0)+1;s.daily[today].awayCount=(s.daily[today].awayCount||0)+1;save()}if(monitoring)setMonitor('복귀 · 재감지중',null)}
+ if(document.hidden){
+  hiddenAt=Date.now();
+  if(monitoring&&!paused)setMonitor('다른 앱/탭으로 이동',false);
+ }
+ else if(hiddenAt){
+  const sec=(Date.now()-hiddenAt)/1000;hiddenAt=0;lastTick=performance.now();
+  if(!paused&&sec>=3){s.tabAwaySec+=sec;s.daily[today].tabAwaySec+=sec;addDistract(sec);save()}
+  if(monitoring)setMonitor(paused?'⏸ 일시정지 · 시간 기록 안 함':'복귀 · 재감지중',null);
+ }
 });
 window.addEventListener('beforeunload',()=>{if(stream)stream.getTracks().forEach(t=>t.stop())});
-render();cloudLoad();
+render();updateCalStatus();cloudLoad();
 </script>
 </body>
 </html>
