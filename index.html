@@ -34,6 +34,17 @@ video{width:100%;max-height:250px;object-fit:cover;background:#090811;border-rad
 .status{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:7px;color:#fff;font-weight:800}.lamp{display:inline-block;width:11px;height:11px;border-radius:50%;background:#aaa;margin-right:5px}.lamp.ok{background:#65e29a}.lamp.bad{background:#ff6f91}.lamp.wait{background:#ffd26a}
 .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}@media(max-width:560px){.metrics{grid-template-columns:repeat(2,1fr)}}.metric{background:#f5f0ff;border:3px solid #846eb0;padding:7px;text-align:center;border-radius:7px}.metric b{display:block;font-size:18px}
 .badge{display:inline-block;padding:4px 6px;border:2px solid #7964a2;background:#f1eaff;margin:2px;border-radius:999px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:8px}
+.dailytable{width:100%;min-width:780px;border-collapse:collapse;font-size:12px}
+.dailytable th,.dailytable td{border:2px solid #d8cfeb;padding:7px 6px;text-align:center;white-space:nowrap}
+.dailytable th{background:#eee7ff;color:#4b3b73}
+.dailytable tr.todayrow td{background:#fff7c8}
+.dailytable tr:nth-child(even):not(.todayrow) td{background:#faf7ff}
+.summarygrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+@media(max-width:560px){.summarygrid{grid-template-columns:1fr}}
+.summarybox{border:3px solid #846eb0;background:#f6f1ff;border-radius:8px;padding:8px;text-align:center}
+.summarybox b{display:block;font-size:18px;margin-top:3px}
+.profilebtn.active{background:#d7f3e6;box-shadow:inset 0 0 0 2px #6f5aa0}
 </style>
 </head>
 <body>
@@ -96,12 +107,16 @@ video{width:100%;max-height:250px;object-fit:cover;background:#090811;border-rad
     <button class="p" onclick="stopMonitor()">종료</button>
   </div>
   <div class="notice">
-    <b>손 자세 보정</b><br>
-    현재 카메라 각도에서 한 번씩 해줘. 카메라 위치를 크게 바꾸면 다시 보정하는 게 정확해.<br>
+    <b>손 자세 보정 프로필</b><br>
+    정면/측면을 각각 한 번만 보정해두고, 이후엔 카메라 각도에 맞는 프로필만 선택하면 돼.<br>
+    <div class="ctrl" style="margin-top:7px">
+      <button class="profilebtn" id="profileFrontBtn" onclick="selectProfile('front')">📷 정면</button>
+      <button class="profilebtn" id="profileSideBtn" onclick="selectProfile('side')">📐 측면</button>
+    </div>
     <div class="ctrl" style="margin-top:7px">
       <button class="y" onclick="startCalibration('pen')">✏️ 펜으로 8초 쓰기</button>
       <button class="y" onclick="startCalibration('phone')">📱 폰으로 8초 사용</button>
-      <button onclick="clearCalibration()">보정 초기화</button>
+      <button onclick="clearCalibration()">현재 프로필 초기화</button>
     </div>
     <div class="sub" id="calStatus" style="margin-top:5px">보정 없음</div>
   </div>
@@ -127,12 +142,49 @@ video{width:100%;max-height:250px;object-fit:cover;background:#090811;border-rad
   <div class="stat"><span>집중감시</span><b><span id="focusTotal">0</span>분</b></div>
 </div>
 
+<div class="card" style="grid-column:1/-1">
+  <div class="big">📅 일별 공부기록</div>
+  <div class="sub">한국시간 기준 · 기록이 있는 날짜만 표시</div>
+
+  <div class="summarygrid">
+    <div class="summarybox"><span>10월 총 집중</span><b id="monthFocus">0:00</b></div>
+    <div class="summarybox"><span>10월 총 딴짓</span><b id="monthDistract">0:00</b></div>
+    <div class="summarybox"><span>전체 집중률</span><b id="monthRate">--</b></div>
+  </div>
+
+  <div class="tablewrap">
+    <table class="dailytable">
+      <thead>
+        <tr>
+          <th>날짜</th>
+          <th>집중</th>
+          <th>딴짓</th>
+          <th>집중률</th>
+          <th>기출</th>
+          <th>인출</th>
+          <th>교육학</th>
+          <th>폰딴짓</th>
+          <th>자리이탈</th>
+        </tr>
+      </thead>
+      <tbody id="dailyTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
 </div></div></div></div>
 
 <script>
 const SYNC_URL='https://fanclxyahahzdjoeqqgu.supabase.co/functions/v1/study-sync';
 const STORAGE='oct_tama_ai_v2';
-const today=new Date().toISOString().slice(0,10);
+function koreaDateKey(date=new Date()){
+ const parts=new Intl.DateTimeFormat('en-CA',{
+  timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'
+ }).formatToParts(date);
+ const obj=Object.fromEntries(parts.map(x=>[x.type,x.value]));
+ return `${obj.year}-${obj.month}-${obj.day}`;
+}
+const today=koreaDateKey();
 const pets={
   1:{name:'기출병아리',e:['🥚','🐣','🐥','🐤','🐦','🪽','🌟']},
   2:{name:'별토끼',e:['🥚','🐰','🐇','🌙','⭐','🌸','👑']},
@@ -163,6 +215,61 @@ function growth(p){
  const xp=x.v+x.r*5+x.e*5+x.rd*2+Math.floor(x.f/1500),goal=120;
  return {st:Math.min(6,Math.floor(xp/20)),pct:Math.min(1,xp/goal),text:`주간 XP ${xp}/${goal}`};
 }
+
+function dayHasData(d){
+ return ['past','variant','recall','edu','read','focusSec','distractSec','phoneCount','awayCount','tabAwaySec']
+   .some(k=>Number(d[k]||0)>0);
+}
+function hm(sec){
+ sec=Math.max(0,Math.floor(sec||0));
+ const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);
+ return h>0?`${h}시간 ${m}분`:`${m}분`;
+}
+function shortDate(ds){
+ const [y,m,d]=ds.split('-');
+ return `${Number(m)}/${Number(d)}`;
+}
+function renderDailyTable(){
+ const body=document.getElementById('dailyTableBody');
+ if(!body)return;
+
+ const rows=Object.entries(s.daily||{})
+   .filter(([date,d])=>date.startsWith('2026-10-')&&dayHasData(d))
+   .sort((a,b)=>a[0].localeCompare(b[0]));
+
+ let monthFocus=0,monthDistract=0;
+ body.innerHTML='';
+
+ if(!rows.length){
+  body.innerHTML='<tr><td colspan="9">아직 기록이 없어.</td></tr>';
+ }else{
+  for(const [date,d] of rows){
+   const focus=Number(d.focusSec||0),dist=Number(d.distractSec||0);
+   monthFocus+=focus;monthDistract+=dist;
+   const denom=focus+dist;
+   const rate=denom?Math.round(focus/denom*100)+'%':'--';
+   const tr=document.createElement('tr');
+   if(date===today)tr.className='todayrow';
+   tr.innerHTML=`
+    <td><b>${shortDate(date)}</b>${date===today?' · 오늘':''}</td>
+    <td>${hm(focus)}</td>
+    <td>${hm(dist)}</td>
+    <td>${rate}</td>
+    <td>${Number(d.past||0)}문제</td>
+    <td>${Number(d.recall||0)}차시</td>
+    <td>${Number(d.edu||0)}묶음</td>
+    <td>${Number(d.phoneCount||0)}회</td>
+    <td>${Number(d.awayCount||0)}회</td>`;
+   body.appendChild(tr);
+  }
+ }
+
+ document.getElementById('monthFocus').textContent=hm(monthFocus);
+ document.getElementById('monthDistract').textContent=hm(monthDistract);
+ const total=monthFocus+monthDistract;
+ document.getElementById('monthRate').textContent=total?Math.round(monthFocus/total*100)+'%':'--';
+}
+
 function render(){
  const p=s.selected||phase(today),g=growth(p),pet=pets[p],d=s.daily[today];
  document.getElementById('pet').textContent=pet.e[g.st];document.getElementById('petName').textContent=pet.name;document.getElementById('stage').textContent=g.st;document.getElementById('petBar').style.width=(g.pct*100)+'%';document.getElementById('growthText').textContent=g.text;document.getElementById('phaseLabel').textContent=p===1?'10/3~10/10 기출 보스':p===2?'10/11~17':p===3?'10/18~24':'10/25~31';
@@ -177,13 +284,30 @@ function render(){
  const denom=(d.focusSec||0)+(d.distractSec||0);
  document.getElementById('focusRate').textContent=denom?Math.round((d.focusSec||0)/denom*100)+'%':'--';
  document.getElementById('phoneCount').textContent=(d.phoneCount||0)+'회';
+ renderDailyTable();
 }
 document.querySelectorAll('.nav div').forEach(el=>el.onclick=()=>{s.selected=Number(el.dataset.p);save()});
 function fmt(sec){sec=Math.floor(sec);return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')}
 
 /* AI monitor: video stays in-browser; only numeric hand features are stored */
-const CAL_STORAGE='oct_tama_hand_cal_v1';
-let cal=JSON.parse(localStorage.getItem(CAL_STORAGE)||'{"pen":null,"phone":null}');
+const CAL_STORAGE='oct_tama_hand_cal_v2';
+const PROFILE_STORAGE='oct_tama_hand_profile_v1';
+function loadCalibration(){
+ let saved=null;
+ try{saved=JSON.parse(localStorage.getItem(CAL_STORAGE)||'null')}catch(e){}
+ if(saved&&saved.front&&saved.side)return saved;
+
+ // 이전 버전 보정값이 있으면 정면 프로필로 자동 이관
+ let old=null;
+ try{old=JSON.parse(localStorage.getItem('oct_tama_hand_cal_v1')||'null')}catch(e){}
+ return {
+  front:{pen:old&&old.pen?old.pen:null,phone:old&&old.phone?old.phone:null},
+  side:{pen:null,phone:null}
+ };
+}
+let cal=loadCalibration();
+let activeProfile=localStorage.getItem(PROFILE_STORAGE)||'front';
+if(!['front','side'].includes(activeProfile))activeProfile='front';
 let stream=null,model=null,handsModel=null,monitoring=false,paused=false,detectTimer=null,tickTimer=null,lastTick=0;
 let absentSince=0,awayLatched=false,hiddenAt=0;
 let phoneSince=0,phoneBlocked=false,phoneLatched=false,phoneRetroDone=false;
@@ -218,26 +342,55 @@ function centroid(samples){
  return out.map(v=>v/samples.length);
 }
 function vecDist(a,b){if(!a||!b)return Infinity;let z=0;for(let i=0;i<a.length;i++){const q=a[i]-b[i];z+=q*q}return Math.sqrt(z/a.length)}
+function profileLabel(p){return p==='front'?'정면':'측면'}
+function selectProfile(p){
+ if(!['front','side'].includes(p))return;
+ activeProfile=p;
+ localStorage.setItem(PROFILE_STORAGE,p);
+ phoneSince=0;phoneBlocked=false;phoneLatched=false;phoneRetroDone=false;
+ updateCalStatus();
+ if(monitoring)setMonitor('📷 '+profileLabel(p)+' 프로필로 전환 · 재감지중',null);
+}
 function updateCalStatus(){
  const el=document.getElementById('calStatus'); if(!el)return;
+ const cur=cal[activeProfile]||{pen:null,phone:null};
+ const fb=document.getElementById('profileFrontBtn');
+ const sb=document.getElementById('profileSideBtn');
+ if(fb)fb.classList.toggle('active',activeProfile==='front');
+ if(sb)sb.classList.toggle('active',activeProfile==='side');
+
  if(calibrationMode){
   const left=Math.max(0,8-(Date.now()-calStartedAt)/1000);
-  el.textContent=(calibrationMode==='pen'?'✏️ 펜 보정중 ':'📱 폰 보정중 ')+left.toFixed(1)+'초';
- }else el.textContent='펜 '+(cal.pen?'✓':'미보정')+' · 폰 '+(cal.phone?'✓':'미보정');
+  el.textContent='['+profileLabel(activeProfile)+'] '+(calibrationMode==='pen'?'✏️ 펜 보정중 ':'📱 폰 보정중 ')+left.toFixed(1)+'초';
+ }else{
+  const front=cal.front||{pen:null,phone:null},side=cal.side||{pen:null,phone:null};
+  el.textContent='현재 '+profileLabel(activeProfile)+' · 펜 '+(cur.pen?'✓':'미보정')+' · 폰 '+(cur.phone?'✓':'미보정')
+   +'  |  정면 '+(front.pen&&front.phone?'완료':'미완료')
+   +' · 측면 '+(side.pen&&side.phone?'완료':'미완료');
+ }
 }
 function startCalibration(kind){
  if(!monitoring){alert('먼저 감시 시작을 눌러 카메라를 켜줘!');return}
  calibrationMode=kind;calSamples=[];calStartedAt=Date.now();updateCalStatus();
 }
-function clearCalibration(){cal={pen:null,phone:null};localStorage.setItem(CAL_STORAGE,JSON.stringify(cal));updateCalStatus()}
+function clearCalibration(){
+ cal[activeProfile]={pen:null,phone:null};
+ localStorage.setItem(CAL_STORAGE,JSON.stringify(cal));
+ updateCalStatus();
+}
 function finishCalibration(){
  if(!calibrationMode)return;
- if(calSamples.length>=5){cal[calibrationMode]=centroid(calSamples);localStorage.setItem(CAL_STORAGE,JSON.stringify(cal))}
+ if(calSamples.length>=5){
+  if(!cal[activeProfile])cal[activeProfile]={pen:null,phone:null};
+  cal[activeProfile][calibrationMode]=centroid(calSamples);
+  localStorage.setItem(CAL_STORAGE,JSON.stringify(cal));
+ }
  calibrationMode=null;calSamples=[];updateCalStatus();
 }
 function classifyHand(){
- if(!lastHandFeatures||Date.now()-handUpdatedAt>2500||!cal.pen||!cal.phone)return {kind:'unknown',confidence:0};
- const dp=vecDist(lastHandFeatures,cal.pen),dh=vecDist(lastHandFeatures,cal.phone),sum=dp+dh+1e-8;
+ const cur=cal[activeProfile]||{pen:null,phone:null};
+ if(!lastHandFeatures||Date.now()-handUpdatedAt>2500||!cur.pen||!cur.phone)return {kind:'unknown',confidence:0};
+ const dp=vecDist(lastHandFeatures,cur.pen),dh=vecDist(lastHandFeatures,cur.phone),sum=dp+dh+1e-8;
  return {kind:dh<dp?'phone':'pen',confidence:Math.abs(dp-dh)/sum};
 }
 async function initHands(){
@@ -257,7 +410,7 @@ async function startMonitor(){
   modelStatus.textContent='AI 로딩중…';
   if(!model)model=await cocoSsd.load({base:'lite_mobilenet_v2'});
   await initHands();
-  modelStatus.textContent='AI 준비됨';
+  modelStatus.textContent='AI 준비됨';updateCalStatus();
   stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
   cam.srcObject=stream;await cam.play();monitoring=true;lastTick=performance.now();setMonitor('감시중',true);
   tickTimer=setInterval(focusTick,1000);detectLoop();updateCalStatus();
