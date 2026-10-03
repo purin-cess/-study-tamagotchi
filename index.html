@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>10월 공부 다마고치</title>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
+<style>
+:root{--ink:#31264f;--lav:#a88de3;--lav2:#d9c8ff;--panel:#fffdf9;--line:#856fb2;--pink:#ffabc9;--mint:#d7f3e6;--yellow:#fff0b6;--soft:#f1eafb}
+*{box-sizing:border-box}
+body{margin:0;background:#eee7fa;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;color:var(--ink)}
+.wrap{max-width:980px;margin:auto;padding:12px}
+.shell{background:var(--lav2);border:6px solid #8b76c2;border-radius:26px;padding:10px;box-shadow:0 8px 0 #6c58aa}
+.screen{background:white;border:5px solid #695790;border-radius:18px;overflow:hidden}
+.top{background:var(--lav);color:#fff;padding:10px 13px;font-weight:850;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:4px solid var(--line);border-radius:14px;padding:12px;box-shadow:4px 4px 0 #d5caea}
+.petstage{min-height:300px;background:linear-gradient(#dcecff 0 55%,#ddf0d0 55%);border:4px solid #5e4d88;border-radius:8px;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.pet{font-size:104px;animation:bob 1.2s steps(2,end) infinite}@keyframes bob{50%{transform:translateY(-6px)}}
+.name{font-size:22px;font-weight:850;margin-top:7px}.sub{font-size:12px;color:#776d91}.big{font-size:22px;font-weight:850}
+.bar{height:18px;border:3px solid #5f4d89;background:#e8e1f2;margin-top:8px}.bar>div{height:100%;background:var(--pink);width:0}
+.notice{background:#fff7c8;border:3px solid #7b68a8;padding:9px;margin-top:9px;border-radius:8px}
+.row{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:9px 0;border-bottom:2px dashed #dfd7ed}.row:last-child{border:0}
+.ctrl{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+button{font:inherit;font-weight:800;border:3px solid #66518e;background:#eee7ff;padding:7px 10px;border-radius:8px;cursor:pointer;box-shadow:3px 3px 0 #b5a3d4}
+button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #b5a3d4}.g{background:var(--mint)}.y{background:var(--yellow)}.p{background:#ffd5e4}
+.nav{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:9px}.nav div{border:3px solid #8874b6;background:#faf5ff;padding:7px;text-align:center;cursor:pointer}.nav .on{background:#fff0b8}.nav b{font-size:28px}
+.stat{display:grid;grid-template-columns:1fr auto;gap:8px;padding:7px 0;border-bottom:2px dotted #ded4eb}.optional{opacity:.8}
+.monitor{background:#191628;border:4px solid #5d4b87;border-radius:10px;padding:8px}
+video{width:100%;max-height:250px;object-fit:cover;background:#090811;border-radius:7px;transform:scaleX(-1)}
+.status{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:7px;color:#fff;font-weight:800}.lamp{display:inline-block;width:11px;height:11px;border-radius:50%;background:#aaa;margin-right:5px}.lamp.ok{background:#65e29a}.lamp.bad{background:#ff6f91}.lamp.wait{background:#ffd26a}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}.metric{background:#f5f0ff;border:3px solid #846eb0;padding:7px;text-align:center;border-radius:7px}.metric b{display:block;font-size:18px}
+.badge{display:inline-block;padding:4px 6px;border:2px solid #7964a2;background:#f1eaff;margin:2px;border-radius:999px}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="shell"><div class="screen">
+<div class="top"><span>★ 10월 공부 다마고치 ★</span><span id="syncState">☁ 동기화 준비</span></div>
+<div class="grid">
+
+<div class="card">
+  <div class="petstage">
+    <div class="pet" id="pet">🥚</div>
+    <div class="name" id="petName">기출병아리</div>
+    <div class="sub"><span id="phaseLabel">10/3~10/10</span> · 성장 <b id="stage">0</b>/6</div>
+    <div class="notice" id="speech">조금만 해도 자라! 알에만 갇혀있지 않을게.</div>
+  </div>
+  <div class="bar"><div id="petBar"></div></div>
+  <div class="sub" id="growthText" style="margin-top:5px"></div>
+  <div class="nav">
+    <div data-p="1"><b>🐣</b><br>10/3~10</div>
+    <div data-p="2"><b>🐇</b><br>10/11~17</div>
+    <div data-p="3"><b>🐉</b><br>10/18~24</div>
+    <div data-p="4"><b>🦊</b><br>10/25~31</div>
+  </div>
+  <div class="notice">
+    <b>1호 성장법</b><br>
+    기출 10문제+정오답 = 3XP · 인출 1차시 = 5XP · 교육학 1묶음 = 5XP · 집중감시 25분 = 1XP · 7번읽기 = 보너스 2XP.<br>
+    <span class="sub">1~5단계는 뭐든 공부하면 자라고, 최종 6단계는 기출 592 완료 시 해금!</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="big">오늘 공부 체크</div>
+  <div class="notice" id="todayMode"></div>
+  <div id="bossPart">
+    <div class="row"><div><b>기출 + 정오답</b><div class="sub">1시간 = 15문제 블록</div></div><div class="ctrl"><button onclick="chgPast(-1)">−</button><b id="pastToday">0</b><button class="g" onclick="chgPast(1)">+1</button><button class="g" onclick="chgPast(15)">+15</button></div></div>
+  </div>
+  <div id="variantPart" style="display:none">
+    <div class="row"><div><b>기출 변형</b><div class="sub">1문제 = 1XP</div></div><div class="ctrl"><button onclick="chgVar(-1)">−</button><b id="varToday">0</b><button class="g" onclick="chgVar(1)">+1</button><button class="g" onclick="chgVar(10)">+10</button></div></div>
+  </div>
+  <div class="row"><div><b>채삐 인출</b><div class="sub">1차시 = 5XP</div></div><div class="ctrl"><button onclick="chgRecall(-1)">−</button><b id="recallToday">0</b><button class="g" onclick="chgRecall(1)">+1차시</button></div></div>
+  <div class="row"><div><b>교육학</b><div class="sub">빈출/퀴즈/모의 1묶음 = 5XP</div></div><div class="ctrl"><button onclick="chgEdu(-1)">−</button><b id="eduToday">0</b><button class="g" onclick="chgEdu(1)">+1묶음</button></div></div>
+  <div class="row optional"><div><b>7번읽기</b><div class="sub">완전 보너스 · 1블록 = 2XP</div></div><div class="ctrl"><button onclick="chgRead(-1)">−</button><b id="readToday">0</b><button class="y" onclick="chgRead(1)">+1</button></div></div>
+</div>
+
+<div class="card">
+  <div class="big">AI 공부 감시모드</div>
+  <div class="notice">얼굴 필요 없음. <b>상체·어깨·팔처럼 사람이 화면 안에 있는지만</b> 감지해. 영상은 저장·업로드하지 않고 브라우저 안에서만 AI 판정.</div>
+  <div class="monitor">
+    <video id="cam" playsinline muted></video>
+    <div class="status"><span><i class="lamp wait" id="lamp"></i><span id="monitorStatus">대기중</span></span><span id="modelStatus">AI 미로딩</span></div>
+  </div>
+  <div class="metrics">
+    <div class="metric"><span>집중</span><b id="focusTime">0:00</b></div>
+    <div class="metric"><span>자리이탈</span><b id="awayCount">0</b></div>
+    <div class="metric"><span>앱이탈</span><b id="tabAway">0분</b></div>
+  </div>
+  <div class="ctrl" style="margin-top:9px">
+    <button class="g" id="startBtn" onclick="startMonitor()">감시 시작</button>
+    <button class="p" onclick="stopMonitor()">종료</button>
+  </div>
+  <div class="sub" style="margin-top:7px">20초 이상 사람이 안 보이면 자리이탈로 기록. 다른 앱/탭으로 나갔다가 돌아오면 이탈시간도 기록돼. iPhone에서 화면을 잠그면 카메라 판정은 중단됨.</div>
+</div>
+
+<div class="card">
+  <div class="big">기출 592 보스</div>
+  <div class="stat"><span>기출+정오답</span><b><span id="pastTotal">0</span>/592</b></div>
+  <div class="bar"><div id="pastBar"></div></div>
+  <div class="notice"><b>10월 10일까지.</b> 하루 목표를 실패 판정하지 않고 누적으로만 계산.<br><span class="sub">지금 할 일은 “다음 15문제” 하나뿐.</span></div>
+  <div style="margin-top:8px">
+    <span class="badge">3·4·5일 비출근</span><span class="badge">6·7·8일 출근</span><span class="badge">9·10일 비출근</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="big">10월 누적 기록</div>
+  <div class="stat"><span>인출</span><b><span id="recallTotal">0</span>차시</b></div>
+  <div class="stat"><span>교육학</span><b><span id="eduTotal">0</span>묶음</b></div>
+  <div class="stat"><span>변형</span><b><span id="varTotal">0</span>문제</b></div>
+  <div class="stat"><span>7번읽기</span><b><span id="readTotal">0</span>블록</b></div>
+  <div class="stat"><span>집중감시</span><b><span id="focusTotal">0</span>분</b></div>
+</div>
+
+</div></div></div></div>
+
+<script>
+const SYNC_URL='https://fanclxyahahzdjoeqqgu.supabase.co/functions/v1/study-sync';
+const STORAGE='oct_tama_ai_v2';
+const today=new Date().toISOString().slice(0,10);
+const pets={
+  1:{name:'기출병아리',e:['🥚','🐣','🐥','🐤','🐦','🪽','🌟']},
+  2:{name:'별토끼',e:['🥚','🐰','🐇','🌙','⭐','🌸','👑']},
+  3:{name:'꼬마용',e:['🥚','🦎','🐲','🐉','🔥','💎','🌈']},
+  4:{name:'구름여우',e:['🥚','🦊','☁️','🌙','✨','🪽','💜']}
+};
+function phase(ds){const d=Number(ds.slice(-2));return d<=10?1:d<=17?2:d<=24?3:4}
+function fresh(){return {season:'oct2026-ai',daily:{},past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,awayCount:0,tabAwaySec:0,selected:phase(today)}}
+let s=JSON.parse(localStorage.getItem(STORAGE)||'null')||fresh();
+if(!s.daily[today])s.daily[today]={past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,awayCount:0,tabAwaySec:0};
+function syncKey(){return new URLSearchParams(location.hash.slice(1)).get('key')||''}
+let saveTimer;
+function save(){localStorage.setItem(STORAGE,JSON.stringify(s));render();clearTimeout(saveTimer);saveTimer=setTimeout(cloudSave,500)}
+async function cloudLoad(){const k=syncKey();if(!k){syncState.textContent='로컬모드';return}try{const r=await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'load',syncKey:k})});const j=await r.json();if(j.state&&j.state.season==='oct2026-ai'){s=j.state;if(!s.daily[today])s.daily[today]={past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,awayCount:0,tabAwaySec:0}}syncState.textContent='☁ 동기화됨';localStorage.setItem(STORAGE,JSON.stringify(s));render()}catch(e){syncState.textContent='로컬저장'}}
+async function cloudSave(){const k=syncKey();if(!k)return;try{syncState.textContent='☁ 저장중';await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',syncKey:k,state:s})});syncState.textContent='☁ 저장완료'}catch(e){syncState.textContent='로컬저장'}}
+function adj(k,n,max=999999){const nv=Math.max(0,Math.min(max,(s[k]||0)+n)),a=nv-(s[k]||0);s[k]=nv;s.daily[today][k]=Math.max(0,(s.daily[today][k]||0)+a);save()}
+function chgPast(n){adj('past',n,592)} function chgVar(n){adj('variant',n)} function chgRecall(n){adj('recall',n)} function chgEdu(n){adj('edu',n)} function chgRead(n){adj('read',n)}
+function phaseStats(p){let v=0,r=0,e=0,rd=0,f=0;for(const [date,d] of Object.entries(s.daily)){if(phase(date)!==p)continue;v+=d.variant||0;r+=d.recall||0;e+=d.edu||0;rd+=d.read||0;f+=d.focusSec||0}return {v,r,e,rd,f}}
+function growth(p){
+ const x=phaseStats(p);
+ if(p===1){
+   const xp=Math.floor(s.past/10)*3+x.r*5+x.e*5+x.rd*2+Math.floor(x.f/1500);
+   const th=[0,12,30,55,85,120];
+   let st=0;for(let i=1;i<=5;i++)if(xp>=th[i])st=i;
+   if(s.past>=592)st=6;
+   return {st,pct:st===6?1:Math.min(.96,xp/145),text:`1호 XP ${xp} · 최종진화 조건: 기출 592`};
+ }
+ const xp=x.v+x.r*5+x.e*5+x.rd*2+Math.floor(x.f/1500),goal=120;
+ return {st:Math.min(6,Math.floor(xp/20)),pct:Math.min(1,xp/goal),text:`주간 XP ${xp}/${goal}`};
+}
+function render(){
+ const p=s.selected||phase(today),g=growth(p),pet=pets[p],d=s.daily[today];
+ document.getElementById('pet').textContent=pet.e[g.st];document.getElementById('petName').textContent=pet.name;document.getElementById('stage').textContent=g.st;document.getElementById('petBar').style.width=(g.pct*100)+'%';document.getElementById('growthText').textContent=g.text;document.getElementById('phaseLabel').textContent=p===1?'10/3~10/10 기출 보스':p===2?'10/11~17':p===3?'10/18~24':'10/25~31';
+ document.getElementById('speech').textContent=g.st===0?'조금만 해도 자라! 알에만 갇혀있지 않을게.':g.st<3?'태어났다! 뭐든 공부하면 먹이가 돼 🌱':g.st<6?'제법 컸다! 계속 먹여줘.':'완전체 달성 ✨';
+ document.querySelectorAll('.nav div').forEach(el=>el.classList.toggle('on',Number(el.dataset.p)===p));
+ const cur=phase(today);document.getElementById('bossPart').style.display=cur===1?'block':'none';document.getElementById('variantPart').style.display=cur===1?'none':'block';
+ document.getElementById('todayMode').innerHTML=cur===1?'<b>10/3~10/10:</b> 기출 592 최우선. 그래도 인출·교육학·집중시간 전부 펫 성장에 반영!':'<b>10/11 이후:</b> 변형 + 인출 + 교육학을 주간 누적으로.';
+ document.getElementById('pastToday').textContent=d.past||0;document.getElementById('varToday').textContent=d.variant||0;document.getElementById('recallToday').textContent=d.recall||0;document.getElementById('eduToday').textContent=d.edu||0;document.getElementById('readToday').textContent=d.read||0;
+ document.getElementById('pastTotal').textContent=s.past;document.getElementById('pastBar').style.width=(s.past/592*100)+'%';document.getElementById('recallTotal').textContent=s.recall;document.getElementById('eduTotal').textContent=s.edu;document.getElementById('varTotal').textContent=s.variant;document.getElementById('readTotal').textContent=s.read;document.getElementById('focusTotal').textContent=Math.floor((s.focusSec||0)/60);
+ document.getElementById('focusTime').textContent=fmt(d.focusSec||0);document.getElementById('awayCount').textContent=d.awayCount||0;document.getElementById('tabAway').textContent=Math.floor((d.tabAwaySec||0)/60)+'분';
+}
+document.querySelectorAll('.nav div').forEach(el=>el.onclick=()=>{s.selected=Number(el.dataset.p);save()});
+function fmt(sec){sec=Math.floor(sec);return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')}
+
+/* AI monitor: all video processing stays in-browser */
+let stream=null,model=null,monitoring=false,detectTimer=null,tickTimer=null,lastTick=0,absentSince=0,awayLatched=false,hiddenAt=0;
+async function startMonitor(){
+ if(monitoring)return;
+ try{
+  document.getElementById('modelStatus').textContent='AI 로딩중…';
+  if(!model)model=await cocoSsd.load({base:'lite_mobilenet_v2'});
+  document.getElementById('modelStatus').textContent='AI 준비됨';
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
+  const v=document.getElementById('cam');v.srcObject=stream;await v.play();
+  monitoring=true;lastTick=performance.now();setMonitor('감시중',true);
+  tickTimer=setInterval(focusTick,1000);detectLoop();
+ }catch(e){setMonitor('카메라/AI 실행 실패',false);document.getElementById('modelStatus').textContent='권한 확인'}
+}
+function stopMonitor(){
+ monitoring=false;if(detectTimer)clearTimeout(detectTimer);if(tickTimer)clearInterval(tickTimer);
+ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+ document.getElementById('cam').srcObject=null;setMonitor('종료됨',null);save()
+}
+function setMonitor(text,ok){document.getElementById('monitorStatus').textContent=text;const l=document.getElementById('lamp');l.className='lamp '+(ok===true?'ok':ok===false?'bad':'wait')}
+function focusTick(){
+ if(!monitoring||document.hidden)return;
+ const now=performance.now(),dt=Math.max(0,(now-lastTick)/1000);lastTick=now;
+ if(!absentSince){s.focusSec=(s.focusSec||0)+dt;s.daily[today].focusSec=(s.daily[today].focusSec||0)+dt}
+ render();
+ if(Math.floor(s.focusSec)%30===0)save();
+}
+async function detectLoop(){
+ if(!monitoring)return;
+ try{
+  const v=document.getElementById('cam');
+  if(v.readyState>=2){
+   const preds=await model.detect(v);
+   const person=preds.some(x=>x.class==='person'&&x.score>=0.42);
+   if(person){absentSince=0;awayLatched=false;setMonitor('사람 감지 · 집중중',true)}
+   else{
+    if(!absentSince)absentSince=Date.now();
+    const sec=(Date.now()-absentSince)/1000;
+    if(sec>=20&&!awayLatched){awayLatched=true;s.awayCount=(s.awayCount||0)+1;s.daily[today].awayCount=(s.daily[today].awayCount||0)+1;save()}
+    setMonitor(sec>=20?'자리이탈 감지':'잠깐 안 보임',false);
+   }
+  }
+ }catch(e){document.getElementById('modelStatus').textContent='AI 판정 오류'}
+ detectTimer=setTimeout(detectLoop,1800);
+}
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden){hiddenAt=Date.now();if(monitoring)setMonitor('다른 앱/탭으로 이동',false)}
+ else if(hiddenAt){const sec=(Date.now()-hiddenAt)/1000;hiddenAt=0;lastTick=performance.now();if(sec>=5){s.tabAwaySec=(s.tabAwaySec||0)+sec;s.daily[today].tabAwaySec=(s.daily[today].tabAwaySec||0)+sec;s.awayCount=(s.awayCount||0)+1;s.daily[today].awayCount=(s.daily[today].awayCount||0)+1;save()}if(monitoring)setMonitor('복귀 · 재감지중',null)}
+});
+window.addEventListener('beforeunload',()=>{if(stream)stream.getTracks().forEach(t=>t.stop())});
+render();cloudLoad();
+</script>
+</body>
+</html>
