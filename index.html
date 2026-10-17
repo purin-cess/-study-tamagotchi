@@ -1,0 +1,2606 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>AI 공부기록 · 캠스터디</title>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--ink:#31264f;--lav:#a88de3;--lav2:#d9c8ff;--panel:#fffdf9;--line:#856fb2;--pink:#ffabc9;--mint:#d7f3e6;--yellow:#fff0b6;--soft:#f1eafb}
+*{box-sizing:border-box}
+/* mobile-fit-v3 */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+html{scroll-padding-top:96px;scroll-padding-bottom:46vh}
+body{--keyboard-gap:0px}
+.wrap,.shell,.screen,.grid,.card,.accountPanel,.configGrid,.trackerEdit,.ctrl,.top,.row{min-width:0}
+.wrap{width:100%}
+.shell,.screen,.grid,.card{max-width:100%}
+input,textarea,select{
+  min-width:0;max-width:100%;width:100%;
+  font-size:16px;
+  scroll-margin-top:110px;
+  scroll-margin-bottom:46vh;
+}
+button{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+body.keyboard-open{padding-bottom:var(--keyboard-gap)}
+@media(max-width:560px){
+  .wrap{padding:4px}
+  .shell{border-width:4px;border-radius:18px;padding:5px;box-shadow:0 5px 0 #6c58aa}
+  .screen{border-width:3px;border-radius:14px}
+  .grid{padding:6px;gap:7px}
+  .card{border-width:3px;border-radius:11px;padding:9px;box-shadow:2px 2px 0 #d5caea}
+  .top{padding:9px 8px}
+  .top>span:first-child{max-width:100%;overflow-wrap:anywhere}
+  .big{font-size:20px}
+  .accountPanel,.configGrid{grid-template-columns:minmax(0,1fr)}
+  .trackerEdit{grid-template-columns:minmax(0,1fr)}
+  .trackerEdit input:first-child{grid-column:auto}
+  .row{flex-wrap:wrap;align-items:flex-start}
+  .row>.ctrl{width:100%;justify-content:flex-end}
+  .bottomNav{padding:5px;gap:4px}
+  .bottomNav button{padding:7px 3px;font-size:14px}
+  .modeChoice{grid-template-columns:1fr}
+}
+
+body{margin:0;background:#eee7fa;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;color:var(--ink)}
+.wrap{max-width:980px;margin:auto;padding:12px}
+.shell{background:var(--lav2);border:6px solid #8b76c2;border-radius:26px;padding:10px;box-shadow:0 8px 0 #6c58aa}
+.screen{background:white;border:5px solid #695790;border-radius:18px;overflow:hidden}
+.top{background:var(--lav);color:#fff;padding:10px 13px;font-weight:850;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:4px solid var(--line);border-radius:14px;padding:12px;box-shadow:4px 4px 0 #d5caea}
+.petstage{min-height:300px;background:linear-gradient(#dcecff 0 55%,#ddf0d0 55%);border:4px solid #5e4d88;border-radius:8px;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.pet{font-size:104px;animation:bob 1.2s steps(2,end) infinite}@keyframes bob{50%{transform:translateY(-6px)}}
+.name{font-size:22px;font-weight:850;margin-top:7px}.sub{font-size:12px;color:#776d91}.big{font-size:22px;font-weight:850}
+.bar{height:18px;border:3px solid #5f4d89;background:#e8e1f2;margin-top:8px}.bar>div{height:100%;background:var(--pink);width:0}
+.notice{background:#fff7c8;border:3px solid #7b68a8;padding:9px;margin-top:9px;border-radius:8px}
+.row{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:9px 0;border-bottom:2px dashed #dfd7ed}.row:last-child{border:0}
+.ctrl{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+button{font:inherit;font-weight:800;border:3px solid #66518e;background:#eee7ff;padding:7px 10px;border-radius:8px;cursor:pointer;box-shadow:3px 3px 0 #b5a3d4}
+button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #b5a3d4}.g{background:var(--mint)}.y{background:var(--yellow)}.p{background:#ffd5e4}
+.nav{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:9px}.nav div{border:3px solid #8874b6;background:#faf5ff;padding:7px;text-align:center;cursor:pointer}.nav .on{background:#fff0b8}.nav b{font-size:28px}
+.stat{display:grid;grid-template-columns:1fr auto;gap:8px;padding:7px 0;border-bottom:2px dotted #ded4eb}.optional{opacity:.8}
+.monitor{background:#191628;border:4px solid #5d4b87;border-radius:10px;padding:8px}
+video{width:100%;max-height:250px;object-fit:cover;background:#090811;border-radius:7px;transform:scaleX(-1)}
+.status{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:7px;color:#fff;font-weight:800}.lamp{display:inline-block;width:11px;height:11px;border-radius:50%;background:#aaa;margin-right:5px}.lamp.ok{background:#65e29a}.lamp.bad{background:#ff6f91}.lamp.wait{background:#ffd26a}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}@media(max-width:560px){.metrics{grid-template-columns:repeat(2,1fr)}}.metric{background:#f5f0ff;border:3px solid #846eb0;padding:7px;text-align:center;border-radius:7px}.metric b{display:block;font-size:18px}
+.badge{display:inline-block;padding:4px 6px;border:2px solid #7964a2;background:#f1eaff;margin:2px;border-radius:999px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:8px}
+.dailytable{width:100%;min-width:780px;border-collapse:collapse;font-size:12px}
+.dailytable th,.dailytable td{border:2px solid #d8cfeb;padding:7px 6px;text-align:center;white-space:nowrap}
+.dailytable th{background:#eee7ff;color:#4b3b73}
+.dailytable tr.todayrow td{background:#fff7c8}
+.dailytable tr:nth-child(even):not(.todayrow) td{background:#faf7ff}
+.summarygrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+@media(max-width:560px){.summarygrid{grid-template-columns:1fr}}
+.summarybox{border:3px solid #846eb0;background:#f6f1ff;border-radius:8px;padding:8px;text-align:center}
+.summarybox b{display:block;font-size:18px;margin-top:3px}
+.profilebtn.active{background:#d7f3e6;box-shadow:inset 0 0 0 2px #6f5aa0}
+.roomgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+@media(max-width:650px){.roomgrid{grid-template-columns:1fr}}
+.videobox{border:4px solid #66518e;border-radius:10px;background:#171421;padding:7px;color:#fff}
+.videobox video{width:100%;height:220px;object-fit:cover;background:#08070d;border-radius:7px;transform:none}
+.videobox.local video{transform:scaleX(-1)}
+.videohead{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:850;margin-bottom:6px}
+.peerstatus{margin-top:7px;background:#f7f2ff;border:3px solid #846eb0;border-radius:8px;padding:8px}
+.peerstats{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px}
+.peerstats div{background:#fff;border:2px solid #d7cdea;padding:6px;text-align:center;border-radius:6px}
+.roominputs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+@media(max-width:560px){.roominputs{grid-template-columns:1fr}}
+.roominputs input{width:100%;font:inherit;border:3px solid #806aa9;border-radius:8px;padding:9px;background:#fff}
+.roomcode{font-family:"Courier New",monospace;font-weight:850;letter-spacing:.5px;word-break:break-all}
+.onlineDot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#aaa;margin-right:5px}
+.onlineDot.on{background:#65e29a}
+.onlineDot.wait{background:#ffd26a}
+.joinReq{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#fff;border:2px solid #d7cdea;border-radius:8px;padding:7px;margin-top:5px}
+.hostTag{display:inline-block;font-size:10px;padding:2px 5px;border:2px solid #785fa2;border-radius:999px;background:#fff0b8}
+.roomgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:650px){.roomgrid{grid-template-columns:1fr}}
+
+.accountCard{grid-column:1/-1}
+.accountPanel{display:grid;grid-template-columns:1.2fr 1.2fr auto auto;gap:7px;align-items:end;margin-top:8px}
+@media(max-width:720px){.accountPanel{grid-template-columns:1fr}}
+.accountPanel input{width:100%;font:inherit;border:3px solid #806aa9;border-radius:8px;padding:9px;background:#fff}
+.accountGood{background:#e2f7ea;border:3px solid #6c9b7e;padding:9px;border-radius:8px;margin-top:8px}
+.recoveryBox{background:#fff0b8;border:4px solid #7963a0;border-radius:10px;padding:12px;margin-top:9px;text-align:center}
+.recoveryCode{font-family:"Courier New",monospace;font-size:20px;font-weight:900;letter-spacing:1px;word-break:break-all;margin:8px 0}
+.configGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+@media(max-width:650px){.configGrid{grid-template-columns:1fr}}
+.configGrid input,.configGrid select{width:100%;font:inherit;border:3px solid #806aa9;border-radius:8px;padding:8px;background:#fff}
+.trackerEdit{display:grid;grid-template-columns:1.4fr .8fr .8fr;gap:6px;margin-top:6px}
+@media(max-width:560px){.trackerEdit{grid-template-columns:1fr 1fr}.trackerEdit input:first-child{grid-column:1/-1}}
+.customTrackerRow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:2px dashed #dfd7ed}
+.customTotalRow{padding:8px 0;border-bottom:2px dotted #ded4eb}
+.studyTag{display:inline-block;padding:2px 6px;border:2px solid #806aa9;border-radius:999px;background:#f1eaff;font-size:10px;margin-left:4px}
+.topActions{display:flex;gap:6px;align-items:center}
+.topMini{border:2px solid rgba(255,255,255,.9);background:rgba(255,255,255,.2);color:#fff;padding:4px 7px;border-radius:7px;box-shadow:none}
+.bottomNav{position:sticky;bottom:0;z-index:20;background:#f8f4ff;border-top:4px solid #6d5a9d;display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:7px}
+.bottomNav button{box-shadow:none;padding:8px 5px}
+.bottomNav button.active{background:#d7f3e6}
+.settingsOnly{display:none}
+.layoutChecks{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:8px}
+@media(max-width:560px){.layoutChecks{grid-template-columns:1fr}}
+.layoutCheck{display:flex;align-items:center;gap:7px;border:3px solid #d5caea;border-radius:8px;padding:8px;background:#fff}
+.layoutCheck input{transform:scale(1.25)}
+.modalShade{position:fixed;inset:0;background:rgba(20,15,38,.58);z-index:999;display:none;align-items:center;justify-content:center;padding:14px}
+.modalBox{width:min(680px,100%);max-height:90vh;overflow:auto;background:#fffdf9;border:5px solid #6d5a9d;border-radius:18px;padding:14px;box-shadow:0 10px 0 #493a70}
+.modalBox h2{margin:0 0 8px}
+.modeChoice{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+@media(max-width:560px){.modeChoice{grid-template-columns:1fr}}
+.modeChoice label{border:3px solid #d5caea;border-radius:10px;padding:10px;background:#fff}
+.modeChoice input{margin-right:6px}
+
+
+
+/* clean-skin-v2 */
+body.skin-clean{
+  --ink:#1f2937;--lav:#f7f8fa;--lav2:#eef1f5;--panel:#ffffff;--line:#d7dce4;
+  --pink:#7c8798;--mint:#eef7f2;--yellow:#f8fafc;--soft:#f5f7fa;
+  background:#f3f5f7;color:#1f2937;
+}
+body.skin-clean .shell{background:#f3f5f7;border:1px solid #d5dbe5;border-radius:16px;padding:8px;box-shadow:none}
+body.skin-clean .screen{border:1px solid #d5dbe5;border-radius:12px}
+body.skin-clean .top{background:#2d3748;color:#fff}
+body.skin-clean .card{border:1px solid #d5dbe5;border-radius:12px;box-shadow:none}
+body.skin-clean button{border:1px solid #cbd2dc;background:#f7f8fa;border-radius:9px;box-shadow:none}
+body.skin-clean button:active{transform:none;box-shadow:none}
+body.skin-clean .g{background:#edf7f1}
+body.skin-clean .y{background:#faf7ed}
+body.skin-clean .p{background:#faf0f2}
+body.skin-clean .notice{background:#f8fafc;border:1px solid #d5dbe5}
+body.skin-clean .bar{border:1px solid #cbd2dc;background:#edf0f4}
+body.skin-clean .nav div{border:1px solid #d5dbe5;background:#fff}
+body.skin-clean .nav .on{background:#eef3f8}
+body.skin-clean .bottomNav{background:#fff;border-top:1px solid #d5dbe5}
+body.skin-clean .bottomNav button.active{background:#eef3f8}
+body.skin-clean .metric,
+body.skin-clean .summarybox,
+body.skin-clean .peerstatus{border:1px solid #d5dbe5;background:#f8fafc}
+body.skin-clean .petstage{border:1px solid #d5dbe5;background:linear-gradient(#f5f7fa 0 55%,#eef3ee 55%)}
+body.skin-clean .layoutCheck{border:1px solid #d5dbe5}
+body.skin-clean .modalBox{border:1px solid #d5dbe5;box-shadow:0 12px 36px rgba(0,0,0,.12)}
+/* subject-areas-v1 */
+.subjectBox{margin-top:9px}
+.subjectSettings{margin-top:8px}
+.subjectSettings textarea{
+  width:100%;min-height:76px;resize:vertical;
+  font:inherit;font-size:16px;line-height:1.45;
+  border:3px solid #806aa9;border-radius:8px;padding:9px;background:#fff
+}
+.subjectSummaryRow{border-bottom:2px dotted #ded4eb;padding:8px 0}
+.subjectSummaryHead{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.subjectMetrics{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px}
+.subjectMetrics span{font-size:11px;background:#f5f0ff;border:2px solid #d8cfeb;border-radius:999px;padding:3px 6px}
+body.skin-clean .subjectSettings textarea{border:1px solid #cbd2dc}
+body.skin-clean .subjectMetrics span{border:1px solid #d5dbe5;background:#f8fafc}
+/* subareas-v1 */
+.subareaEditor{margin-top:8px;padding:8px;border:2px dashed #d8cfeb;border-radius:8px;background:#faf8ff}
+.subareaEditorRow{display:grid;grid-template-columns:160px 1fr;gap:7px;align-items:center;margin-top:6px}
+@media(max-width:560px){.subareaEditorRow{grid-template-columns:1fr}}
+.subareaEditorRow input,.subareaEditorRow select{width:100%;font:inherit;font-size:16px;border:2px solid #cfc4e5;border-radius:7px;padding:7px;background:#fff}
+.subareaTag{display:inline-block;font-size:10px;padding:2px 5px;border-radius:999px;border:1px solid #c9bfdc;background:#f7f3ff;margin-left:5px}
+body.skin-clean .subareaEditor{border:1px dashed #d5dbe5;background:#fbfcfd}
+body.skin-clean .subareaEditorRow input,body.skin-clean .subareaEditorRow select{border:1px solid #cbd2dc}
+/* weekly-routine-v1 */
+.routineBox{margin-top:9px;padding:9px;border:2px dashed #d8cfeb;border-radius:8px;background:#faf8ff}
+.routineRow{display:grid;grid-template-columns:46px 1fr;gap:8px;align-items:center;margin-top:6px}
+.routineRow select{width:100%;font:inherit;font-size:16px;border:2px solid #cfc4e5;border-radius:7px;padding:7px;background:#fff}
+.routineToday{display:inline-block;margin-left:6px;padding:2px 6px;border-radius:999px;background:#e9f7ef;border:1px solid #a9d4ba;font-size:10px}
+body.skin-clean .routineBox{border:1px dashed #d5dbe5;background:#fbfcfd}
+body.skin-clean .routineRow select{border:1px solid #cbd2dc}
+/* multi-routine-todo-v1 */
+.routineChecks{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.routineCheck{display:inline-flex;align-items:center;gap:4px;padding:5px 7px;border:2px solid #d3c8e7;border-radius:999px;background:#fff;font-size:12px}
+.routineCheck input{width:auto;min-width:auto}
+.routineQuick{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.routineQuick button{padding:4px 7px;font-size:12px;box-shadow:none}
+.routineQuick button.on{background:#d7f3e6}
+.todoBox{margin-top:9px;padding:9px;border:2px dashed #d8cfeb;border-radius:8px;background:#fffdf9}
+.todoAdd{display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:7px}
+.todoAdd input{width:100%;font-size:16px;border:2px solid #cfc4e5;border-radius:7px;padding:8px;background:#fff}
+.todoItem{display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center;padding:7px 0;border-bottom:1px dashed #e3ddec}
+.todoItem:last-child{border-bottom:0}
+.todoItem.done .todoText{text-decoration:line-through;opacity:.55}
+.todoItem input[type="checkbox"]{width:20px;height:20px}
+.todoDelete{padding:3px 7px;box-shadow:none}
+body.skin-clean .routineCheck{border:1px solid #d5dbe5}
+body.skin-clean .todoBox{border:1px dashed #d5dbe5;background:#fbfcfd}
+body.skin-clean .todoAdd input{border:1px solid #cbd2dc}
+/* legacy-item-visibility-v1 */
+.legacyVisBox{margin-top:9px;padding:9px;border:2px dashed #d8cfeb;border-radius:8px;background:#faf8ff}
+.legacyVisChecks{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.legacyVisChecks label{display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border:2px solid #d3c8e7;border-radius:999px;background:#fff;font-size:12px}
+.legacyVisChecks input{width:auto;min-width:auto}
+body.skin-clean .legacyVisBox{border:1px dashed #d5dbe5;background:#fbfcfd}
+body.skin-clean .legacyVisChecks label{border:1px solid #d5dbe5}
+/* partial-phone-v1 */
+.phoneGuide{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:34%;aspect-ratio:1.15/1;border:3px dashed rgba(255,255,255,.95);
+  border-radius:12px;pointer-events:none;display:none;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.10) inset;
+}
+.monitor{position:relative}
+.partialPhoneBox{margin-top:8px;padding:8px;border:2px dashed #d8cfeb;border-radius:8px;background:#faf8ff}
+body.skin-clean .partialPhoneBox{border:1px dashed #d5dbe5;background:#fbfcfd}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="shell"><div class="screen">
+<div class="top">
+  <span>★ AI 공부기록 · 캠스터디 ★</span>
+  <span class="topActions"><span id="syncState">☁ 동기화 준비</span><button class="topMini" onclick="openLayoutSetup()">⚙️ 화면 구성</button></span>
+</div>
+<div class="grid">
+<div class="card accountCard settingsOnly" data-settings-card="1">
+  <div class="big">👤 내 공부기록 연결</div>
+  <div id="accountDisconnected">
+    <div class="sub">이메일·전화번호·회원가입 없이 <b>닉네임 + 내 코드</b>만 만들면 돼. 다른 기기에서는 같은 코드를 입력하면 기록이 그대로 이어져.</div>
+    <div class="accountPanel">
+      <div><div class="sub">닉네임</div><input id="accountNickname" maxlength="20" placeholder="예: 노란 병아리"></div>
+      <div><div class="sub">내 코드 · 최소 8자</div><input id="accountCode" maxlength="64" autocomplete="off" autocapitalize="none" placeholder="예: yellowchick8"></div>
+      <button class="g" onclick="createCodeAccount()">처음 사용 · 코드 만들기</button>
+      <button class="y" onclick="loginCodeAccount()">전에 썼어요 · 불러오기</button>
+    </div>
+    <div class="ctrl" style="margin-top:8px">
+      <button onclick="recoverCodeAccount()">🛟 복구코드로 복구</button>
+      <span class="sub">내 코드는 사실상 비밀번호 역할이라 남에게 알려주면 안 돼. 계정 삭제 때도 본인 확인용으로 다시 입력해.</span>
+    </div>
+    <div id="accountMessage" class="sub" style="margin-top:7px"></div>
+  </div>
+
+  <div id="accountConnected" style="display:none">
+    <div class="accountGood">
+      <b>☁ 모든 기기 연동됨</b> · <span id="accountDisplayName">-</span><br>
+      <span class="sub">이 기기에서는 코드를 다시 입력하지 않아도 돼. 친구방에는 내 코드가 아니라 닉네임만 보여.</span>
+    </div>
+    <div class="ctrl" style="margin-top:8px">
+      <button onclick="switchCodeAccount()">로그아웃 / 다른 계정</button>
+      <button class="p" onclick="deleteCodeAccount()">계정 삭제</button>
+    </div>
+    <div class="sub" style="margin-top:6px">
+      로그아웃은 서버 기록을 남기고, 계정 삭제는 현재 코드의 클라우드 기록과 복구 연결까지 삭제해.
+    </div>
+  </div>
+
+  <div id="recoveryReveal" class="recoveryBox" style="display:none">
+    <b>🛟 복구코드</b>
+    <div class="recoveryCode" id="recoveryRevealCode"></div>
+    <div class="sub">내 코드를 잊었을 때 새 코드로 바꾸는 데 필요해. 이 화면을 닫으면 다시 보여주지 않아.</div>
+    <div class="ctrl" style="justify-content:center;margin-top:8px">
+      <button class="g" onclick="copyRecoveryCode()">복구코드 복사</button>
+      <button onclick="hideRecoveryCode()">확인했어요</button>
+    </div>
+  </div>
+</div>
+
+<div class="card settingsOnly" data-settings-card="1" id="studySettingsCard">
+  <div class="big">⚙️ 내 공부 설정</div>
+  <div class="sub">사람마다 공부가 다르니까 자기 기록항목을 직접 정할 수 있어. 이 설정도 내 코드에 같이 저장돼.</div>
+  <div class="configGrid">
+    <div>
+      <div class="sub">공부 카테고리</div>
+      <select id="studyCategorySelect" onchange="onStudyCategoryChange()">
+        <option value="">선택해줘</option>
+        <option value="exam">시험·자격증</option>
+        <option value="language">외국어</option>
+        <option value="reading">독서·읽기</option>
+        <option value="lecture">강의·수업</option>
+        <option value="writing">글쓰기·논문</option>
+        <option value="coding">코딩·프로젝트</option>
+        <option value="practice">연습·훈련</option>
+        <option value="custom">직접 입력</option>
+      </select>
+    </div>
+    <div id="customCategoryWrap" style="display:none">
+      <div class="sub">카테고리 직접 입력</div>
+      <input id="customCategoryInput" maxlength="24" placeholder="직접입력">
+    </div>
+    <div>
+      <div class="sub">공부 이름</div>
+      <input id="studyTitleInput" maxlength="30" placeholder="예: 토익 / 한국사 / 논문 / 독서">
+    </div>
+    <div>
+      <div class="sub">다마고치</div>
+      <select id="tamagotchiSelect"><option value="on">사용함</option><option value="off">사용 안 함</option></select>
+    </div>
+    <div>
+      <div class="sub">화면 스킨</div>
+      <select id="skinSelect" onchange="previewSkin()">
+        <option value="kitsch">키치 · 보라 다마고치</option>
+        <option value="clean">깔끔 · 미니멀</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="notice" id="categorySuggestionBox" style="display:none">
+    <b>추천 기록항목</b>
+    <div class="sub" id="categorySuggestionText"></div>
+    <button class="y" style="margin-top:7px" onclick="applyCategoryPreset()">추천 항목 넣기</button>
+  </div>
+
+  <div id="customTrackerSettings">
+    <div class="sub" style="margin-top:10px">기록항목 · 추천을 써도 되고 전부 직접 바꿔도 돼. 비워둔 줄은 사용하지 않음.</div>
+    <div class="trackerEdit"><input id="trackerName1" placeholder="예: 문제 / 단어 / 페이지"><input id="trackerUnit1" placeholder="단위"><input id="trackerGoal1" inputmode="numeric" placeholder="목표"></div>
+    <div class="trackerEdit"><input id="trackerName2" placeholder="예: 강의 / 챕터 / 세션"><input id="trackerUnit2" placeholder="단위"><input id="trackerGoal2" inputmode="numeric" placeholder="목표"></div>
+    <div class="trackerEdit"><input id="trackerName3" placeholder="예: 복습 / 듣기 / 작성"><input id="trackerUnit3" placeholder="단위"><input id="trackerGoal3" inputmode="numeric" placeholder="목표"></div>
+    <div class="trackerEdit"><input id="trackerName4" placeholder="예: 암기 / 연습 / 직접입력"><input id="trackerUnit4" placeholder="단위"><input id="trackerGoal4" inputmode="numeric" placeholder="목표"></div>
+  </div>
+  <div class="subjectSettings">
+    <div class="sub"><b>세부 과목/영역</b> · 쉼표(,)로 구분해서 최대 12개까지 적어줘.</div>
+    <textarea id="subjectAreasInput" maxlength="240" placeholder="예: 문법, 독해, 듣기"></textarea>
+    <div class="sub" id="subjectAreasHelp" style="margin-top:4px">예: 외국어라면 문법, 독해, 듣기처럼 자유롭게 나눌 수 있어.</div>
+  </div>
+  <div class="subareaEditor" id="subareaEditor">
+    <div class="sub"><b>과목별 세부영역</b> · 필요한 과목만 더 잘게 나눌 수 있어. 비워두면 그 과목은 1단계로만 사용해.</div>
+    <div id="subareaEditorRows"></div>
+  </div>
+  <div class="routineBox">
+    <div class="configGrid" style="margin-top:0">
+      <div>
+        <div class="sub"><b>요일 루틴</b></div>
+        <select id="weeklyRoutineEnabled" onchange="toggleRoutineEditor()">
+          <option value="off">사용 안 함</option>
+          <option value="on">사용함</option>
+        </select>
+      </div>
+    </div>
+    <div class="sub" style="margin-top:5px">
+      선택사항이야. 앱이 과목을 정해주지 않아. 네가 '매일'과 요일별 과목을 직접 체크하면 그 조합을 오늘 루틴으로 띄워줘.
+    </div>
+    <div id="weeklyRoutineRows" style="display:none"></div>
+  </div>
+
+  <div class="legacyVisBox" id="legacyVisibilityBox" style="display:none">
+    <div class="sub"><b>내 공부 체크 항목 표시</b> · 체크를 꺼도 기존 기록은 삭제되지 않아.</div>
+    <div class="legacyVisChecks">
+      <label><input type="checkbox" id="showPastItem"> 기출</label>
+      <label><input type="checkbox" id="showVariantItem"> 기출변형</label>
+      <label><input type="checkbox" id="showRecallItem"> 채삐 인출</label>
+      <label><input type="checkbox" id="showEduItem"> 교육학</label>
+      <label><input type="checkbox" id="showReadItem"> 7번읽기</label>
+    </div>
+  </div>
+
+  <div id="privateLegacyHint" class="notice" style="display:none">
+    <b>내 기존 공부 설정</b>
+    <div class="sub">이 계정에는 기존 개인 설정이 있어서 현재 기록항목은 그대로 유지해. 위 카테고리 메뉴는 구경해도 기존 기록이 바뀌지 않아. 다른 사용자에게는 이 설정이 보이지 않아.</div>
+  </div>
+  <div class="ctrl" style="margin-top:8px"><button class="g" onclick="saveStudySettings()">설정 저장</button><span class="sub" id="studySettingsStatus"></span></div>
+</div>
+
+<div class="card settingsOnly" data-settings-card="1">
+  <div class="big">🧩 홈 화면 구성</div>
+  <div class="sub">홈에 필요한 블록만 두고, 나머지는 전체 기능 탭에 보관하거나 아예 숨길 수 있어.</div>
+  <button class="g" style="margin-top:8px" onclick="openLayoutSetup()">블록 다시 고르기</button>
+</div>
+
+<div class="card" data-block="pet" id="petCard">
+  <div class="petstage">
+    <div class="pet" id="pet">🥚</div>
+    <div class="name" id="petName">기출병아리</div>
+    <div class="sub"><span id="phaseLabel">10/3~10/10</span> · 성장 <b id="stage">0</b>/6</div>
+    <div class="notice" id="speech">조금만 해도 자라! 알에만 갇혀있지 않을게.</div>
+  </div>
+  <div class="bar"><div id="petBar"></div></div>
+  <div class="sub" id="growthText" style="margin-top:5px"></div>
+  <div class="nav" id="petNav">
+    <div data-p="1"><b>🐣</b><br>10/3~10</div>
+    <div data-p="2"><b>🐇</b><br>10/11~17</div>
+    <div data-p="3"><b>🐉</b><br>10/18~24</div>
+    <div data-p="4"><b>🦊</b><br>10/25~31</div>
+  </div>
+  <div class="notice">
+    <b>1호 성장법</b><br>
+    기출 10문제+정오답 = 3XP · 인출 1차시 = 5XP · 교육학 1묶음 = 5XP · 집중감시 25분 = 1XP · 7번읽기 = 보너스 2XP.<br>
+    <span class="sub">1~5단계는 뭐든 공부하면 자라고, 최종 6단계는 기출 592 완료 시 해금!</span>
+  </div>
+</div>
+
+<div class="card" data-block="today" id="studyCheckCard">
+  <div class="big">오늘 공부 체크 <span class="studyTag" id="studyTitleTag"></span></div>
+  <div class="notice" id="todayMode"></div>
+  <div class="notice subjectBox" id="subjectPickerWrap" style="display:none">
+    <div class="sub"><b>오늘 공부할 과목/영역</b></div>
+    <select id="activeSubjectSelect" onchange="changeActiveSubject()"></select>
+    <select id="activeSubareaSelect" onchange="changeActiveSubarea()" style="margin-top:6px;display:none"></select>
+    <div class="sub" id="activeSubjectHint" style="margin-top:4px">선택한 과목/영역으로 체크 기록과 집중시간이 함께 쌓여.</div>
+    <div class="sub" id="todayRoutineInfo" style="margin-top:5px"></div>
+    <div class="routineQuick" id="todayRoutineQuick"></div>
+  </div>
+  <div id="legacyStudyControls">
+  <div id="bossPart">
+    <div class="row" id="pastStudyRow"><div><b>기출 + 정오답</b><div class="sub">1시간 = 15문제 블록</div></div><div class="ctrl"><button onclick="chgPast(-1)">−</button><b id="pastToday">0</b><button class="g" onclick="chgPast(1)">+1</button><button class="g" onclick="chgPast(15)">+15</button></div></div>
+  </div>
+  <div id="variantPart">
+    <div class="row" id="variantStudyRow"><div><b>기출 변형</b><div class="sub">1문제 = 1XP</div></div><div class="ctrl"><button onclick="chgVar(-1)">−</button><b id="varToday">0</b><button class="g" onclick="chgVar(1)">+1</button><button class="g" onclick="chgVar(10)">+10</button></div></div>
+  </div>
+  <div class="row" id="recallStudyRow"><div><b id="privateRecallLabel">인출</b><div class="sub">1차시 = 5XP</div></div><div class="ctrl"><button onclick="chgRecall(-1)">−</button><b id="recallToday">0</b><button class="g" onclick="chgRecall(1)">+1차시</button></div></div>
+  <div class="row" id="eduStudyRow"><div><b>교육학</b><div class="sub">빈출/퀴즈/모의 1묶음 = 5XP</div></div><div class="ctrl"><button onclick="chgEdu(-1)">−</button><b id="eduToday">0</b><button class="g" onclick="chgEdu(1)">+1묶음</button></div></div>
+  <div class="row optional" id="readStudyRow"><div><b>7번읽기</b><div class="sub">완전 보너스 · 1블록 = 2XP</div></div><div class="ctrl"><button onclick="chgRead(-1)">−</button><b id="readToday">0</b><button class="y" onclick="chgRead(1)">+1</button></div></div>
+</div>
+  </div>
+  <div id="customStudyControls" style="display:none"></div>
+
+  <div class="todoBox">
+    <div class="big" style="font-size:17px">✅ 오늘 할 일</div>
+    <div class="sub">요일 루틴과 별개로 오늘만 해야 할 일을 자유롭게 적어둘 수 있어.</div>
+    <div class="todoAdd">
+      <input id="todayTodoInput" maxlength="80" placeholder="직접입력" onkeydown="if(event.key==='Enter'){event.preventDefault();addTodayTodo()}">
+      <button class="g" onclick="addTodayTodo()">추가</button>
+    </div>
+    <div id="todayTodoList" style="margin-top:5px"></div>
+  </div>
+</div>
+
+<div class="card" data-block="monitor">
+  <div class="big">AI 공부 감시모드</div>
+  <div class="notice">얼굴 필요 없음. <b>사람·휴대폰 객체 + 실제 휴대폰 객체</b>을 함께 본다. 영상은 저장하지 않고 브라우저 안에서만 판정해. 손 보정은 필기 자세 참고용이고, 폰 판정은 실제 휴대폰 객체를 우선하고, 선택적으로 보정한 폰 윗부분/카메라섬 특징을 보조로 써.</div>
+  <div class="monitor">
+    <video id="cam" playsinline muted></video><div class="phoneGuide" id="phoneGuide"></div>
+    <div class="status"><span><i class="lamp wait" id="lamp"></i><span id="monitorStatus">대기중</span></span><span id="modelStatus">AI 미로딩</span></div>
+  </div>
+  <div class="metrics">
+    <div class="metric"><span>집중시간</span><b id="focusTime">0:00</b></div>
+    <div class="metric"><span>딴짓시간</span><b id="distractTime">0:00</b></div>
+    <div class="metric"><span>집중률</span><b id="focusRate">--</b></div>
+    <div class="metric"><span>폰딴짓</span><b id="phoneCount">0회</b></div>
+  </div>
+  <div class="ctrl" style="margin-top:9px">
+    <button class="g" id="startBtn" onclick="startMonitor()">감시 시작</button>
+    <button class="y" id="pauseBtn" onclick="togglePause()">⏸ 일시정지</button>
+    <button class="p" onclick="stopMonitor()">종료</button>
+  </div>
+    <div class="partialPhoneBox">
+      <div class="sub"><b>📱 부분폰 보정</b> · 손에 가려져 폰 윗부분/카메라섬만 보이는 경우를 위한 보조 판정이야.</div>
+      <div class="sub" style="margin-top:4px">정면은 최대 3개, 측면은 최대 2개 자세를 따로 저장할 수 있어.</div>
+      <div class="ctrl" style="margin-top:6px">
+        <button class="y" onclick="startPartialPhoneCalibration()">현재 자세 추가 보정</button>
+        <button onclick="clearPartialPhoneCalibration()">현재 프로필 보정 삭제</button>
+      </div>
+      <div class="sub" id="partialPhoneStatus" style="margin-top:5px">부분폰 보정 미완료</div>
+    </div>
+
+  <div class="notice">
+    <b>손 자세 보정 프로필</b><br>
+    정면/측면을 각각 한 번만 보정해두고, 이후엔 카메라 각도에 맞는 프로필만 선택하면 돼.<br>
+    <div class="ctrl" style="margin-top:7px">
+      <button class="profilebtn" id="profileFrontBtn" onclick="selectProfile('front')">📷 정면</button>
+      <button class="profilebtn" id="profileSideBtn" onclick="selectProfile('side')">📐 측면</button>
+    </div>
+    <div class="ctrl" style="margin-top:7px">
+      <button class="y" onclick="startCalibration('pen')">✏️ 펜으로 8초 쓰기</button>
+      <button class="y" onclick="startCalibration('phone')">📱 폰으로 8초 사용</button>
+      <button onclick="clearCalibration()">현재 프로필 초기화</button>
+    </div>
+    <div class="sub" id="calStatus" style="margin-top:5px">보정 없음</div>
+  </div>
+  <div class="sub" style="margin-top:7px">20초 이상 자리이탈 → 딴짓. 폰 패턴 10초 → 경고, 30초 → 폰을 잡기 시작한 구간부터 딴짓으로 재분류. 다른 앱/탭 이탈시간도 딴짓으로 누적. 화장실·물 뜨러 가기 같은 정상 휴식은 ⏸ 일시정지를 누르면 집중/딴짓 어느 쪽에도 기록되지 않아.</div>
+</div>
+
+<div class="card" data-block="group" style="grid-column:1/-1">
+  <div class="big">👯 소규모 캠스터디 · 최대 4명</div>
+  <div class="notice">
+    <b>방장 포함 최대 4명.</b> 친구가 초대링크로 들어오면 방장에게 입장 요청이 뜨고,
+    <b>수락된 사람만</b> 캠·AI 공부상태·오늘 집중/딴짓시간을 같이 볼 수 있어.
+    영상은 저장하지 않고 WebRTC로 기기끼리 직접 전송하고, 오디오는 공유하지 않아.
+  </div>
+
+  <div class="roominputs">
+    <div>
+      <div class="sub">내 닉네임</div>
+      <input id="roomNickname" maxlength="20" placeholder="예: 노란 병아리">
+    </div>
+    <div>
+      <div class="sub">방 코드</div>
+      <input id="roomCode" class="roomcode" maxlength="40" placeholder="방 만들기 또는 초대코드 입력">
+    </div>
+  </div>
+
+  <div class="ctrl" style="margin-top:8px">
+    <button class="g" onclick="createStudyRoom()">✨ 방 만들기</button>
+    <button class="g" onclick="joinStudyRoom()">🚪 입장 요청</button>
+    <button class="y" id="shareVideoBtn" onclick="toggleVideoShare()">📹 영상 공유 ON</button>
+    <button onclick="copyRoomInvite()">🔗 초대링크 복사</button>
+    <button class="p" onclick="leaveStudyRoom()">나가기</button>
+  </div>
+
+  <div class="notice" id="roomStatus">
+    <i class="onlineDot wait" id="roomLamp"></i>
+    <span id="roomStatusText">방에 들어가 있지 않음</span>
+    <b style="float:right" id="roomCount">0/4</b>
+  </div>
+
+  <div id="joinRequestPanel" class="notice" style="display:none">
+    <b>🔔 입장 요청</b>
+    <div id="joinRequestList" style="margin-top:6px"></div>
+  </div>
+
+  <div class="roomgrid" id="studyRoomGrid">
+    <div class="videobox local">
+      <div class="videohead">
+        <span>나 · <span id="myRoomName">-</span> <span id="hostBadge"></span></span>
+        <span id="myRoomActivity">대기중</span>
+      </div>
+      <video id="roomLocalVideo" playsinline autoplay muted></video>
+      <div class="peerstatus">
+        <div class="peerstats">
+          <div>집중<br><b id="myRoomFocus">0분</b></div>
+          <div>딴짓<br><b id="myRoomDistract">0분</b></div>
+          <div>집중률<br><b id="myRoomRate">--</b></div>
+        </div>
+      </div>
+    </div>
+    <div id="remoteRoomCards" style="display:contents"></div>
+  </div>
+
+  <div class="sub" style="margin-top:7px">
+    초대코드를 모르는 사람은 방을 찾을 수 없고, 링크를 전달받아도 방장 수락 전에는 정식 입장되지 않아.
+    현재 영상은 최대 4명용 P2P 방식이라 네트워크 환경에 따라 영상 연결 상태가 달라질 수 있어.
+  </div>
+</div>
+
+<div class="card" data-block="progress" data-study-mode="librarian" id="legacyBossCard">
+  <div class="big">기출 592 보스</div>
+  <div class="stat"><span>기출+정오답</span><b><span id="pastTotal">0</span>/592</b></div>
+  <div class="bar"><div id="pastBar"></div></div>
+  <div class="notice">
+    <b>기출 592 누적 보스</b> · 날짜 제한 없이 완료할 때까지 계속 누적해.<br>
+    <span class="sub">오늘 한 만큼만 더하면 돼. 하루 목표를 못 채워도 실패 처리하지 않아.</span>
+  </div>
+  <div style="margin-top:8px">
+    <span class="badge">3·4·5일 비출근</span><span class="badge">6·7·8일 출근</span><span class="badge">9·10일 비출근</span>
+  </div>
+</div>
+
+<div class="card" data-block="progress" data-study-mode="librarian" id="legacyTotalsCard">
+  <div class="big">10월 누적 기록</div>
+  <div class="stat"><span id="privateRecallTotalLabel">인출</span><b><span id="recallTotal">0</span>차시</b></div>
+  <div class="stat"><span>교육학</span><b><span id="eduTotal">0</span>묶음</b></div>
+  <div class="stat"><span>변형</span><b><span id="varTotal">0</span>문제</b></div>
+  <div class="stat"><span>7번읽기</span><b><span id="readTotal">0</span>블록</b></div>
+  <div class="stat"><span>집중감시</span><b><span id="focusTotal">0</span>분</b></div>
+</div>
+
+<div class="card" data-block="progress" data-study-mode="custom" id="customTotalsCard" style="display:none">
+  <div class="big">📊 내 공부 누적</div>
+  <div id="customTotalsBody"></div>
+  <div class="stat"><span>집중시간</span><b id="customFocusTotal">0분</b></div>
+</div>
+
+<div class="card" data-block="progress" id="subjectSummaryCard" style="grid-column:1/-1">
+  <div class="big">📚 과목/영역별 누적</div>
+  <div class="sub">과목별 기록은 이 기능을 적용한 시점부터 쌓여.</div>
+  <div id="subjectSummaryBody" style="margin-top:7px"></div>
+</div>
+
+<div class="card" data-block="daily" style="grid-column:1/-1">
+  <div class="big">📅 일별 공부기록</div>
+  <div id="repairNotice" class="notice" style="display:none"></div>
+  <div class="sub">한국시간 기준 · 기록이 있는 날짜만 표시</div>
+
+  <div class="summarygrid">
+    <div class="summarybox"><span>이번 달 총 집중</span><b id="monthFocus">0:00</b></div>
+    <div class="summarybox"><span>이번 달 총 딴짓</span><b id="monthDistract">0:00</b></div>
+    <div class="summarybox"><span>전체 집중률</span><b id="monthRate">--</b></div>
+  </div>
+
+  <div class="tablewrap">
+    <table class="dailytable">
+      <thead id="dailyTableHead"></thead>
+      <tbody id="dailyTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+<div class="bottomNav">
+  <button id="navHome" class="active" onclick="showAppPage('home')">🏠 홈</button>
+  <button id="navIndex" onclick="showAppPage('index')">🗂 전체 기능</button>
+  <button id="navSettings" onclick="showAppPage('settings')">⚙️ 설정</button>
+</div>
+</div></div></div>
+
+<div class="modalShade" id="layoutModal">
+  <div class="modalBox">
+    <h2>🧩 내 화면 만들기</h2>
+    <div class="sub">홈에 자주 볼 블록만 골라. 나머지는 ‘전체 기능’ 뒷장에 둘 수도 있고 완전히 숨길 수도 있어.</div>
+    <div class="layoutChecks">
+      <label class="layoutCheck"><input type="checkbox" value="today" class="layoutBlockCheck"> 📝 오늘 공부 체크</label>
+      <label class="layoutCheck"><input type="checkbox" value="monitor" class="layoutBlockCheck"> 🤖 AI 집중 감시</label>
+      <label class="layoutCheck"><input type="checkbox" value="pet" class="layoutBlockCheck"> 🐣 다마고치</label>
+      <label class="layoutCheck"><input type="checkbox" value="progress" class="layoutBlockCheck"> 📊 목표·누적 진행</label>
+      <label class="layoutCheck"><input type="checkbox" value="daily" class="layoutBlockCheck"> 📅 일별 공부기록</label>
+      <label class="layoutCheck"><input type="checkbox" value="group" class="layoutBlockCheck"> 👯 캠스터디 그룹</label>
+    </div>
+
+    <div class="big" style="font-size:17px;margin-top:12px">선택하지 않은 블록은?</div>
+    <div class="modeChoice">
+      <label><input type="radio" name="layoutMode" value="index"> <b>전체 기능 뒷장에 보관</b><br><span class="sub">홈은 깔끔하게, 필요할 때 🗂 전체 기능에서 열기</span></label>
+      <label><input type="radio" name="layoutMode" value="homeonly"> <b>첫 화면만 사용</b><br><span class="sub">선택하지 않은 기능은 아예 숨김</span></label>
+    </div>
+    <div class="ctrl" style="margin-top:12px;justify-content:flex-end">
+      <button onclick="closeLayoutSetup()">취소</button>
+      <button class="g" onclick="saveLayoutSetup()">이대로 사용</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SYNC_URL='https://fanclxyahahzdjoeqqgu.supabase.co/functions/v1/study-sync';
+const SUPABASE_URL='https://fanclxyahahzdjoeqqgu.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_aM0UbQhRfT2M70rC6GDhwQ_Ar6kFTgb';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
+ auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}
+});
+const STORAGE='oct_tama_ai_v2';
+function koreaDateKey(date=new Date()){
+ const parts=new Intl.DateTimeFormat('en-CA',{
+  timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'
+ }).formatToParts(date);
+ const obj=Object.fromEntries(parts.map(x=>[x.type,x.value]));
+ return `${obj.year}-${obj.month}-${obj.day}`;
+}
+const today=koreaDateKey();
+const pets={
+  1:{name:'기출병아리',e:['🥚','🐣','🐥','🐤','🐦','🪽','🌟']},
+  2:{name:'별토끼',e:['🥚','🐰','🐇','🌙','⭐','🌸','👑']},
+  3:{name:'꼬마용',e:['🥚','🦎','🐲','🐉','🔥','💎','🌈']},
+  4:{name:'구름여우',e:['🥚','🦊','☁️','🌙','✨','🪽','💜']}
+};
+function phase(ds){const d=Number(ds.slice(-2));return d<=10?1:d<=17?2:d<=24?3:4}
+function fresh(){return {season:'oct2026-ai',daily:{},past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,distractSec:0,awayCount:0,phoneCount:0,tabAwaySec:0,selected:phase(today)}}
+let s=JSON.parse(localStorage.getItem(STORAGE)||'null')||fresh();
+if(!s.daily[today])s.daily[today]={past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,distractSec:0,awayCount:0,phoneCount:0,tabAwaySec:0};
+
+function makeLibrarianStudyConfig(){
+ return {mode:'librarian',title:'임용 공부',tamagotchi:true,items:[
+  {id:'past',name:'기출',unit:'문제',goal:592},{id:'recall',name:'인출',unit:'차시',goal:100},
+  {id:'edu',name:'교육학',unit:'묶음',goal:0},{id:'read',name:'7번읽기',unit:'블록',goal:0}
+ ]};
+}
+function makeCustomStudyConfig(){
+ return {mode:'custom',category:'',customCategory:'',title:'내 공부',tamagotchi:false,items:[
+  {id:'c1',name:'',unit:'',goal:0},{id:'c2',name:'',unit:'',goal:0},
+  {id:'c3',name:'',unit:'',goal:0},{id:'c4',name:'',unit:'',goal:0}
+ ]};
+}
+function hasLegacyStudyData(){return Number(s.past||0)+Number(s.recall||0)+Number(s.edu||0)+Number(s.read||0)+Number(s.variant||0)>0}
+function isPrivateLegacyUser(){return !!(s.studyConfig&&s.studyConfig.mode==='librarian') || hasLegacyStudyData()}
+function ensureStudyConfig(){
+ if(!s.studyConfig)s.studyConfig=hasLegacyStudyData()?makeLibrarianStudyConfig():makeCustomStudyConfig();
+ if(!Array.isArray(s.studyConfig.items))s.studyConfig.items=[];
+ if(!s.daily[today].custom)s.daily[today].custom={};
+ if(!s.customTotals)s.customTotals={};
+ if(s.studyConfig.mode==='custom'){
+  if(s.studyConfig.category==null)s.studyConfig.category='';
+  if(s.studyConfig.customCategory==null)s.studyConfig.customCategory='';
+ }
+}
+function getStudyConfig(){ensureStudyConfig();return s.studyConfig}
+
+function ensureLegacyVisibility(){
+ if(!s.legacyVisibility || typeof s.legacyVisibility!=='object'){
+  s.legacyVisibility={past:true,variant:true,recall:true,edu:true,read:true};
+ }
+ for(const k of ['past','variant','recall','edu','read']){
+  if(typeof s.legacyVisibility[k]!=='boolean')s.legacyVisibility[k]=true;
+ }
+ return s.legacyVisibility;
+}
+function renderLegacyVisibility(){
+ const cfg=getStudyConfig(),box=document.getElementById('legacyVisibilityBox');
+ if(box)box.style.display=cfg.mode==='librarian'?'block':'none';
+ if(cfg.mode!=='librarian')return;
+ const v=ensureLegacyVisibility();
+ const map={showPastItem:'past',showVariantItem:'variant',showRecallItem:'recall',showEduItem:'edu',showReadItem:'read'};
+ for(const [id,key] of Object.entries(map)){
+  const el=document.getElementById(id);if(el)el.checked=v[key];
+ }
+}
+function saveLegacyVisibilityFromForm(){
+ const cfg=getStudyConfig();if(cfg.mode!=='librarian')return;
+ const v=ensureLegacyVisibility();
+ const map={showPastItem:'past',showVariantItem:'variant',showRecallItem:'recall',showEduItem:'edu',showReadItem:'read'};
+ for(const [id,key] of Object.entries(map)){
+  const el=document.getElementById(id);if(el)v[key]=!!el.checked;
+ }
+}
+function applyLegacyItemVisibility(){
+ const cfg=getStudyConfig();if(cfg.mode!=='librarian')return;
+ const v=ensureLegacyVisibility();
+ const ids={past:'pastStudyRow',variant:'variantStudyRow',recall:'recallStudyRow',edu:'eduStudyRow',read:'readStudyRow'};
+ for(const [key,id] of Object.entries(ids)){
+  const el=document.getElementById(id);if(el)el.style.display=v[key]?'flex':'none';
+ }
+ const bp=document.getElementById('bossPart');if(bp)bp.style.display=v.past?'block':'none';
+ const vp=document.getElementById('variantPart');if(vp)vp.style.display=v.variant?'block':'none';
+}
+
+
+const LIBRARIAN_PRIVATE_SUBJECTS=['독교','학도경','분류목록','정봉','매체','디도','정검','교육학'];
+const LIBRARIAN_EDUCATION_SUBAREAS=['교육심리','상담·진로','교육과정','교육방법·공학','교육평가','교육사회','교육행정·경영','교육철학·교육사'];
+
+const WEEKDAY_LABELS=['일','월','화','수','목','금','토'];
+
+function ensureWeeklyRoutine(){
+ if(!s.weeklyRoutine || typeof s.weeklyRoutine!=='object'){
+  s.weeklyRoutine={enabled:false,days:{}};
+ }
+ if(!s.weeklyRoutine.days || typeof s.weeklyRoutine.days!=='object')s.weeklyRoutine.days={};
+ // Migrate old single-subject routine format to multi-subject arrays.
+ for(const [day,plan] of Object.entries(s.weeklyRoutine.days)){
+  if(plan && plan.subjectId && !Array.isArray(plan.subjectIds)){
+   plan.subjectIds=[plan.subjectId];
+   delete plan.subjectId;
+  }
+  if(plan && !Array.isArray(plan.subjectIds))plan.subjectIds=[];
+ }
+ return s.weeklyRoutine;
+}
+function routineForToday(){
+ const r=ensureWeeklyRoutine();
+ return r.days[String(new Date().getDay())]||{subjectIds:[]};
+}
+function todayRoutineSubjectIds(){
+ const r=ensureWeeklyRoutine();
+ const everyday=Array.isArray(r.days.everyday?.subjectIds)?r.days.everyday.subjectIds:[];
+ const todayPlan=routineForToday();
+ const weekday=Array.isArray(todayPlan.subjectIds)?todayPlan.subjectIds:[];
+ return [...new Set([...everyday,...weekday])];
+}
+function applyRoutineForToday(){
+ ensureSubjectConfig();
+ const r=ensureWeeklyRoutine(),d=s.daily[today];
+ if(!r.enabled || d.manualSubjectChoice)return false;
+ const ids=todayRoutineSubjectIds();
+ const first=ids.map(id=>getSubjects().find(x=>x.id===id)).find(Boolean);
+ if(!first)return false;
+ s.activeSubjectId=first.id;
+ s.activeSubareaId='';
+ return true;
+}
+function markManualSubjectChoice(){
+ if(!s.daily[today])return;
+ s.daily[today].manualSubjectChoice=true;
+}
+function resetTodayToRoutine(){
+ if(!s.daily[today])return;
+ s.daily[today].manualSubjectChoice=false;
+ applyRoutineForToday();
+ save();
+ renderSubjectUI();
+}
+function chooseRoutineSubject(subjectId){
+ const subject=getSubjects().find(x=>x.id===subjectId);
+ if(!subject)return;
+ s.activeSubjectId=subject.id;
+ s.activeSubareaId='';
+ markManualSubjectChoice();
+ save();
+ renderSubjectUI();
+}
+function toggleRoutineEditor(){
+ const el=document.getElementById('weeklyRoutineEnabled');
+ const rows=document.getElementById('weeklyRoutineRows');
+ if(rows)rows.style.display=el&&el.value==='on'?'block':'none';
+ renderRoutineEditor();
+}
+function renderRoutineEditor(){
+ const wrap=document.getElementById('weeklyRoutineRows');
+ if(!wrap)return;
+ const enabled=document.getElementById('weeklyRoutineEnabled');
+ const routine=ensureWeeklyRoutine(),subjects=getSubjects();
+ if(enabled)enabled.value=routine.enabled?'on':'off';
+ wrap.style.display=routine.enabled?'block':'none';
+ if(!routine.enabled){wrap.innerHTML='';return}
+ if(!subjects.length){
+  wrap.innerHTML='<div class="sub" style="margin-top:7px">먼저 세부 과목/영역을 저장하면 요일별 선택지가 생겨.</div>';
+  return;
+ }
+
+ const renderRow=(key,label)=>{
+  const selected=new Set((routine.days[String(key)]||{}).subjectIds||[]);
+  return `<div class="routineRow" style="align-items:flex-start">
+    <b style="padding-top:6px">${label}</b>
+    <div class="routineChecks">
+      ${subjects.map(su=>`<label class="routineCheck">
+        <input type="checkbox" data-routine-day="${key}" value="${escapeHtml(su.id)}" ${selected.has(su.id)?'checked':''}>
+        ${escapeHtml(su.name)}
+      </label>`).join('')}
+    </div>
+  </div>`;
+ };
+
+ const order=[1,2,3,4,5,6,0];
+ wrap.innerHTML=
+   '<div class="sub" style="margin-top:7px;margin-bottom:4px"><b>내가 직접 정하는 루틴</b> · 매일 할 과목과 요일별 과목을 체크해줘.</div>'
+   +renderRow('everyday','매일')
+   +order.map(day=>renderRow(day,WEEKDAY_LABELS[day])).join('');
+}
+function saveWeeklyRoutineFromForm(){
+ const enabled=document.getElementById('weeklyRoutineEnabled');
+ const routine=ensureWeeklyRoutine();
+ routine.enabled=!!enabled && enabled.value==='on';
+ routine.days={};
+ document.querySelectorAll('[data-routine-day]').forEach(chk=>{
+  if(!chk.checked)return;
+  const day=String(chk.dataset.routineDay);
+  if(!routine.days[day])routine.days[day]={subjectIds:[]};
+  routine.days[day].subjectIds.push(chk.value);
+ });
+ if(s.daily[today] && !s.daily[today].manualSubjectChoice)applyRoutineForToday();
+}
+function renderTodayRoutineInfo(){
+ const el=document.getElementById('todayRoutineInfo');
+ const quick=document.getElementById('todayRoutineQuick');
+ if(!el)return;
+ const r=ensureWeeklyRoutine(),ids=todayRoutineSubjectIds();
+ if(!r.enabled){
+  el.textContent='';
+  if(quick)quick.innerHTML='';
+  return;
+ }
+ const subjects=ids.map(id=>getSubjects().find(x=>x.id===id)).filter(Boolean);
+ if(!subjects.length){
+  el.innerHTML='오늘은 루틴에서 <b>선택 없음</b>으로 설정돼 있어.';
+  if(quick)quick.innerHTML='';
+  return;
+ }
+ const manual=!!s.daily[today].manualSubjectChoice;
+ el.innerHTML=`오늘 루틴 <span class="routineToday">${subjects.map(x=>escapeHtml(x.name)).join(' · ')}</span>`
+   +(manual?` · 지금은 직접 선택한 과목을 사용 중 <button onclick="resetTodayToRoutine()" style="padding:2px 6px;margin-left:4px">첫 루틴 과목으로</button>`:'');
+ if(quick){
+  quick.innerHTML=subjects.map(x=>`<button class="${x.id===s.activeSubjectId?'on':''}" onclick="chooseRoutineSubject('${x.id}')">${escapeHtml(x.name)}</button>`).join('');
+ }
+}
+
+function ensureTodayTodos(){
+ const d=s.daily[today];
+ if(!Array.isArray(d.todos))d.todos=[];
+ return d.todos;
+}
+function addTodayTodo(){
+ const input=document.getElementById('todayTodoInput');if(!input)return;
+ const text=String(input.value||'').trim().slice(0,80);
+ if(!text)return;
+ const todos=ensureTodayTodos();
+ todos.push({id:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random()),text,done:false,createdAt:Date.now()});
+ input.value='';
+ save();
+ renderTodayTodos();
+}
+function toggleTodayTodo(id){
+ const item=ensureTodayTodos().find(x=>x.id===id);if(!item)return;
+ item.done=!item.done;
+ save();
+ renderTodayTodos();
+}
+function deleteTodayTodo(id){
+ const d=s.daily[today];
+ d.todos=ensureTodayTodos().filter(x=>x.id!==id);
+ save();
+ renderTodayTodos();
+}
+function renderTodayTodos(){
+ const wrap=document.getElementById('todayTodoList');if(!wrap)return;
+ const todos=ensureTodayTodos();
+ if(!todos.length){
+  wrap.innerHTML='<div class="sub">오늘만 할 일이 있으면 위에 적어둬.</div>';
+  return;
+ }
+ wrap.innerHTML=todos.map(x=>`<div class="todoItem ${x.done?'done':''}">
+   <input type="checkbox" ${x.done?'checked':''} onchange="toggleTodayTodo('${x.id}')">
+   <span class="todoText">${escapeHtml(x.text)}</span>
+   <button class="todoDelete" onclick="deleteTodayTodo('${x.id}')">×</button>
+  </div>`).join('');
+}
+
+function subjectIdFromName(name,index=0){
+ const base=String(name||'').normalize('NFKC').trim().toLowerCase()
+  .replace(/\s+/g,'-').replace(/[^0-9a-z가-힣_-]/g,'').slice(0,28);
+ return (base||'subject')+'-'+index;
+}
+function normalizeSubjectList(names){
+ const seen=new Set(),out=[];
+ for(const raw of names){
+  const name=String(raw||'').normalize('NFKC').trim().replace(/\s+/g,' ').slice(0,30);
+  if(!name)continue;
+  const key=name.toLowerCase();
+  if(seen.has(key))continue;
+  seen.add(key);
+  out.push({id:subjectIdFromName(name,out.length+1),name,subareas:[]});
+  if(out.length>=12)break;
+ }
+ return out;
+}
+function normalizeSubareaList(names){
+ const seen=new Set(),out=[];
+ for(const raw of names){
+  const name=String(raw||'').normalize('NFKC').trim().replace(/\s+/g,' ').slice(0,30);
+  if(!name)continue;
+  const key=name.toLowerCase();
+  if(seen.has(key))continue;
+  seen.add(key);
+  out.push({id:subjectIdFromName(name,out.length+1),name});
+  if(out.length>=16)break;
+ }
+ return out;
+}
+function ensureSubjectConfig(){
+ const cfg=getStudyConfig();
+ if(!Array.isArray(cfg.subjects)){
+  cfg.subjects=cfg.mode==='librarian'
+   ? normalizeSubjectList(LIBRARIAN_PRIVATE_SUBJECTS)
+   : [];
+ }
+ // Migrate old subject objects to support optional nested subareas.
+ cfg.subjects=cfg.subjects.map((x,i)=>({
+  id:x.id||subjectIdFromName(x.name,i+1),
+  name:x.name||('영역 '+(i+1)),
+  subareas:Array.isArray(x.subareas)?x.subareas:[]
+ }));
+ // Private legacy profile: add education as a top-level subject and seed its subareas once.
+ if(cfg.mode==='librarian'){
+  let edu=cfg.subjects.find(x=>x.name==='교육학');
+  if(!edu){
+   edu={id:subjectIdFromName('교육학',cfg.subjects.length+1),name:'교육학',subareas:[]};
+   cfg.subjects.push(edu);
+  }
+  if(!edu.subareas.length)edu.subareas=normalizeSubareaList(LIBRARIAN_EDUCATION_SUBAREAS);
+ }
+ if(!s.subjectTotals||typeof s.subjectTotals!=='object')s.subjectTotals={};
+ if(!s.daily[today].subjects||typeof s.daily[today].subjects!=='object')s.daily[today].subjects={};
+ if(!s.activeSubjectId || !cfg.subjects.some(x=>x.id===s.activeSubjectId)){
+  s.activeSubjectId=cfg.subjects[0]?.id||'';
+ }
+ const active=cfg.subjects.find(x=>x.id===s.activeSubjectId);
+ if(!active || !Array.isArray(active.subareas) || !active.subareas.some(x=>x.id===s.activeSubareaId)){
+  s.activeSubareaId='';
+ }
+}
+function getSubjects(){ensureSubjectConfig();return getStudyConfig().subjects||[]}
+function activeSubject(){
+ ensureSubjectConfig();
+ return getSubjects().find(x=>x.id===s.activeSubjectId)||null;
+}
+function activeSubarea(){
+ const sub=activeSubject();
+ if(!sub||!s.activeSubareaId)return null;
+ return (sub.subareas||[]).find(x=>x.id===s.activeSubareaId)||null;
+}
+function subareaBucket(subjectBucketObj,subareaId){
+ if(!subareaId)return null;
+ if(!subjectBucketObj.subareas||typeof subjectBucketObj.subareas!=='object')subjectBucketObj.subareas={};
+ if(!subjectBucketObj.subareas[subareaId])subjectBucketObj.subareas[subareaId]={focusSec:0,distractSec:0,past:0,variant:0,recall:0,edu:0,read:0,custom:{}};
+ if(!subjectBucketObj.subareas[subareaId].custom)subjectBucketObj.subareas[subareaId].custom={};
+ return subjectBucketObj.subareas[subareaId];
+}
+
+function subjectBucket(container,subjectId){
+ if(!subjectId)return null;
+ if(!container[subjectId])container[subjectId]={focusSec:0,distractSec:0,past:0,variant:0,recall:0,edu:0,read:0,custom:{},subareas:{}};
+ if(!container[subjectId].custom)container[subjectId].custom={};
+ if(!container[subjectId].subareas)container[subjectId].subareas={};
+ return container[subjectId];
+}
+function applySubjectDelta(key,delta,customId=null){
+ const sub=activeSubject();if(!sub||!delta)return;
+ const dayMap=s.daily[today].subjects||(s.daily[today].subjects={});
+ const totalMap=s.subjectTotals||(s.subjectTotals={});
+ const db=subjectBucket(dayMap,sub.id),tb=subjectBucket(totalMap,sub.id);
+ const subarea=activeSubarea();
+ const dsb=subarea?subareaBucket(db,subarea.id):null;
+ const tsb=subarea?subareaBucket(tb,subarea.id):null;
+ if(customId){
+  db.custom[customId]=Math.max(0,Number(db.custom[customId]||0)+delta);
+  tb.custom[customId]=Math.max(0,Number(tb.custom[customId]||0)+delta);
+  if(dsb)dsb.custom[customId]=Math.max(0,Number(dsb.custom[customId]||0)+delta);
+  if(tsb)tsb.custom[customId]=Math.max(0,Number(tsb.custom[customId]||0)+delta);
+ }else{
+  db[key]=Math.max(0,Number(db[key]||0)+delta);
+  tb[key]=Math.max(0,Number(tb[key]||0)+delta);
+  if(dsb)dsb[key]=Math.max(0,Number(dsb[key]||0)+delta);
+  if(tsb)tsb[key]=Math.max(0,Number(tsb[key]||0)+delta);
+ }
+}
+function changeActiveSubject(){
+ const el=document.getElementById('activeSubjectSelect');
+ s.activeSubjectId=el?el.value:'';
+ s.activeSubareaId='';
+ markManualSubjectChoice();
+ localStorage.setItem(STORAGE,JSON.stringify(s));
+ renderSubjectUI();
+}
+function changeActiveSubarea(){
+ const el=document.getElementById('activeSubareaSelect');
+ s.activeSubareaId=el?el.value:'';
+ markManualSubjectChoice();
+ localStorage.setItem(STORAGE,JSON.stringify(s));
+ renderSubjectUI();
+}
+function renderSubjectUI(){
+ ensureSubjectConfig();ensureWeeklyRoutine();applyRoutineForToday();
+ const subjects=getSubjects(),wrap=document.getElementById('subjectPickerWrap'),sel=document.getElementById('activeSubjectSelect');
+ if(wrap)wrap.style.display=subjects.length?'block':'none';
+ if(sel){
+  const current=s.activeSubjectId;
+  sel.innerHTML=subjects.map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)}</option>`).join('');
+  if(subjects.some(x=>x.id===current))sel.value=current;
+ }
+ const currentSubject=activeSubject();
+ const subSel=document.getElementById('activeSubareaSelect');
+ if(subSel){
+  const subs=currentSubject?.subareas||[];
+  if(subs.length){
+   subSel.style.display='block';
+   subSel.innerHTML='<option value="">세부영역 선택 없음 · '+escapeHtml(currentSubject.name)+' 전체</option>'
+    +subs.map(x=>`<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)}</option>`).join('');
+   subSel.value=subs.some(x=>x.id===s.activeSubareaId)?s.activeSubareaId:'';
+  }else{
+   subSel.style.display='none';subSel.innerHTML='';s.activeSubareaId='';
+  }
+ }
+ const cfg=getStudyConfig();
+ const input=document.getElementById('subjectAreasInput');
+ if(input && document.activeElement!==input)input.value=subjects.map(x=>x.name).join(', ');
+ const help=document.getElementById('subjectAreasHelp');
+ if(help && cfg.mode==='librarian'){
+  help.textContent='내 기존 개인 설정에는 사서 임용 영역을 자동으로 넣어뒀어. 이름은 언제든 바꿀 수 있어.';
+ }
+ renderSubareaEditor();
+ renderRoutineEditor();
+ renderTodayRoutineInfo();
+ renderTodayTodos();
+ renderSubjectSummary();
+}
+function renderSubareaEditor(){
+ const wrap=document.getElementById('subareaEditorRows');if(!wrap)return;
+ const subjects=getSubjects();
+ if(!subjects.length){wrap.innerHTML='<div class="sub" style="margin-top:6px">먼저 위에서 과목/영역을 추가해줘.</div>';return}
+ wrap.innerHTML=subjects.map(sub=>`
+  <div class="subareaEditorRow">
+   <b>${escapeHtml(sub.name)}</b>
+   <input data-subject-subareas="${escapeHtml(sub.id)}" value="${escapeHtml((sub.subareas||[]).map(x=>x.name).join(', '))}" placeholder="세부영역 직접입력 · 쉼표로 구분">
+  </div>`).join('');
+}
+function renderSubjectSummary(){
+ const body=document.getElementById('subjectSummaryBody');if(!body)return;
+ const subjects=getSubjects(),cfg=getStudyConfig();
+ const hasAny=b=>{
+  if(!b)return false;
+  if(Number(b.focusSec||0)>0||Number(b.distractSec||0)>0||Number(b.past||0)>0||Number(b.variant||0)>0||Number(b.recall||0)>0||Number(b.edu||0)>0||Number(b.read||0)>0)return true;
+  if(Object.values(b.custom||{}).some(v=>Number(v||0)>0))return true;
+  if(Object.values(b.subareas||{}).some(sb=>hasAny(sb)))return true;
+  return false;
+ };
+ const activeSubjects=subjects.filter(sub=>hasAny((s.subjectTotals||{})[sub.id]));
+ if(!activeSubjects.length){
+  body.innerHTML='<div class="notice">과목별 통계는 이 기능을 적용한 뒤 공부한 기록부터 쌓여. 아직 과목별 기록은 없어.</div>';
+  return;
+ }
+ body.innerHTML=activeSubjects.map(sub=>{
+  const b=(s.subjectTotals||{})[sub.id]||{},parts=[];
+  if(Number(b.focusSec||0)>0)parts.push(`집중 ${hm(b.focusSec||0)}`);
+  if(Number(b.distractSec||0)>0)parts.push(`딴짓 ${hm(b.distractSec||0)}`);
+  if(cfg.mode==='librarian'){
+   if(Number(b.past||0)>0)parts.push(`기출 ${b.past}문제`);
+   if(Number(b.variant||0)>0)parts.push(`변형 ${b.variant}문제`);
+   if(Number(b.recall||0)>0)parts.push(`인출 ${b.recall}차시`);
+   if(Number(b.edu||0)>0)parts.push(`교육학 ${b.edu}묶음`);
+   if(Number(b.read||0)>0)parts.push(`7번읽기 ${b.read}블록`);
+  }else{
+   for(const item of activeCustomItems()){
+    const v=Number((b.custom||{})[item.id]||0);
+    if(v>0)parts.push(`${escapeHtml(item.name)} ${v}${escapeHtml(item.unit||'')}`);
+   }
+  }
+  const nested=(sub.subareas||[]).map(sa=>{
+   const sb=(b.subareas||{})[sa.id]||{},sp=[];
+   if(Number(sb.focusSec||0)>0)sp.push(`집중 ${hm(sb.focusSec||0)}`);
+   if(Number(sb.distractSec||0)>0)sp.push(`딴짓 ${hm(sb.distractSec||0)}`);
+   if(cfg.mode==='librarian'){
+    if(Number(sb.past||0)>0)sp.push(`기출 ${sb.past}문제`);
+    if(Number(sb.variant||0)>0)sp.push(`변형 ${sb.variant}문제`);
+    if(Number(sb.recall||0)>0)sp.push(`인출 ${sb.recall}차시`);
+    if(Number(sb.edu||0)>0)sp.push(`교육학 ${sb.edu}묶음`);
+    if(Number(sb.read||0)>0)sp.push(`7번읽기 ${sb.read}블록`);
+   }else{
+    for(const item of activeCustomItems()){
+     const v=Number((sb.custom||{})[item.id]||0);
+     if(v>0)sp.push(`${escapeHtml(item.name)} ${v}${escapeHtml(item.unit||'')}`);
+    }
+   }
+   return sp.length?`<div class="sub" style="margin-top:4px;padding-left:8px">↳ <b>${escapeHtml(sa.name)}</b> · ${sp.join(' · ')}</div>`:'';
+  }).join('');
+  return `<div class="subjectSummaryRow">
+   <div class="subjectSummaryHead"><b>${escapeHtml(sub.name)}</b></div>
+   <div class="subjectMetrics">${parts.map(x=>`<span>${x}</span>`).join('')}</div>
+   ${nested}
+  </div>`;
+ }).join('');
+}
+
+function applySkin(){
+ const skin=s.uiSkin||'kitsch';
+ document.body.classList.toggle('skin-clean',skin==='clean');
+ const el=document.getElementById('skinSelect');
+ if(el)el.value=skin;
+}
+function previewSkin(){
+ const el=document.getElementById('skinSelect');
+ if(!el)return;
+ document.body.classList.toggle('skin-clean',el.value==='clean');
+}
+
+ensureStudyConfig();
+
+const CATEGORY_PRESETS={
+ exam:{
+  label:'시험·자격증',
+  suggestion:'문제 풀이 · 강의 · 복습 · 암기처럼 시험 준비에 흔히 쓰는 항목',
+  items:[['문제','문제'],['강의','강'],['복습','회'],['암기','개']]
+ },
+ language:{
+  label:'외국어',
+  suggestion:'단어 · 듣기 · 읽기 · 말하기처럼 언어 학습 항목',
+  items:[['단어','개'],['듣기','분'],['읽기','쪽'],['말하기','분']]
+ },
+ reading:{
+  label:'독서·읽기',
+  suggestion:'페이지 · 챕터 · 책 · 메모처럼 읽기 중심 항목',
+  items:[['페이지','쪽'],['챕터','개'],['완독','권'],['메모','개']]
+ },
+ lecture:{
+  label:'강의·수업',
+  suggestion:'강의 · 복습 · 과제 · 연습처럼 수업 중심 항목',
+  items:[['강의','강'],['복습','회'],['과제','개'],['연습','회']]
+ },
+ writing:{
+  label:'글쓰기·논문',
+  suggestion:'작성량 · 자료 읽기 · 수정 · 세션처럼 글쓰기 중심 항목',
+  items:[['작성','쪽'],['자료읽기','쪽'],['수정','회'],['집필세션','회']]
+ },
+ coding:{
+  label:'코딩·프로젝트',
+  suggestion:'문제 · 기능 · 세션 · 문서처럼 프로젝트 진행 항목',
+  items:[['문제','개'],['기능','개'],['집중세션','회'],['문서','쪽']]
+ },
+ practice:{
+  label:'연습·훈련',
+  suggestion:'연습세트 · 반복 · 곡/과제 · 시간처럼 훈련 중심 항목',
+  items:[['연습세트','회'],['반복','회'],['과제','개'],['연습시간','분']]
+ },
+ custom:{
+  label:'직접 입력',
+  suggestion:'원하는 항목을 자유롭게 적어줘.',
+  items:[['',''],['',''],['',''],['','']]
+ }
+};
+function onStudyCategoryChange(){
+ const v=studyCategorySelect.value;
+ customCategoryWrap.style.display=v==='custom'?'block':'none';
+ const p=CATEGORY_PRESETS[v];
+ categorySuggestionBox.style.display=v?'block':'none';
+ categorySuggestionText.textContent=p?p.suggestion:'';
+}
+function applyCategoryPreset(){
+ const v=studyCategorySelect.value,p=CATEGORY_PRESETS[v];
+ if(!p)return;
+ for(let i=1;i<=4;i++){
+  const pair=p.items[i-1]||['',''];
+  document.getElementById('trackerName'+i).value=pair[0];
+  document.getElementById('trackerUnit'+i).value=pair[1];
+ }
+}
+function fillStudySettingsForm(){
+ ensureSubjectConfig();
+ const cfg=getStudyConfig(),legacy=cfg.mode==='librarian';
+ if(document.getElementById('studyTitleInput'))studyTitleInput.value=cfg.title||'';
+ if(document.getElementById('tamagotchiSelect'))tamagotchiSelect.value=cfg.tamagotchi?'on':'off';
+ if(document.getElementById('skinSelect'))skinSelect.value=s.uiSkin||'kitsch';
+ applySkin();
+ if(document.getElementById('studyCategorySelect')){
+  studyCategorySelect.disabled=false;
+  studyCategorySelect.value=legacy?'':(cfg.category||'');
+ }
+ if(document.getElementById('customCategoryInput'))customCategoryInput.value=legacy?'':(cfg.customCategory||'');
+ if(document.getElementById('customCategoryWrap'))customCategoryWrap.style.display=!legacy&&cfg.category==='custom'?'block':'none';
+ if(document.getElementById('categorySuggestionBox'))categorySuggestionBox.style.display=!legacy&&cfg.category?'block':'none';
+ if(document.getElementById('categorySuggestionText')&&!legacy&&cfg.category){
+  categorySuggestionText.textContent=(CATEGORY_PRESETS[cfg.category]||{}).suggestion||'';
+ }
+ if(document.getElementById('customTrackerSettings'))customTrackerSettings.style.display=legacy?'none':'block';
+ if(document.getElementById('privateLegacyHint'))privateLegacyHint.style.display=legacy?'block':'none';
+ for(let i=1;i<=4;i++){
+  const item=legacy?{}:(cfg.items[i-1]||{});
+  const n=document.getElementById('trackerName'+i),u=document.getElementById('trackerUnit'+i),g=document.getElementById('trackerGoal'+i);
+  if(n)n.value=item.name||'';if(u)u.value=item.unit||'';if(g)g.value=item.goal||'';
+ }
+ if(!legacy)onStudyCategoryChange();
+ renderLegacyVisibility();
+ const si=document.getElementById('subjectAreasInput');
+ if(si)si.value=getSubjects().map(x=>x.name).join(', ');
+ const wr=document.getElementById('weeklyRoutineEnabled');
+ if(wr)wr.value=ensureWeeklyRoutine().enabled?'on':'off';
+ renderSubjectUI();
+ renderRoutineEditor();
+}
+function saveStudySettings(){
+ ensureSubjectConfig();
+ const cfg=getStudyConfig();
+ cfg.title=(studyTitleInput.value||cfg.title||'내 공부').trim().slice(0,30)||'내 공부';
+ cfg.tamagotchi=tamagotchiSelect.value==='on';
+ if(document.getElementById('skinSelect'))s.uiSkin=skinSelect.value||'kitsch';
+ applySkin();
+ if(cfg.mode==='custom'){
+  cfg.category=studyCategorySelect.value||'custom';
+  cfg.customCategory=cfg.category==='custom'?(customCategoryInput.value||'').trim().slice(0,24):'';
+  cfg.items=[];
+  for(let i=1;i<=4;i++){
+   const name=(document.getElementById('trackerName'+i).value||'').trim().slice(0,20);
+   const unit=(document.getElementById('trackerUnit'+i).value||'').trim().slice(0,10);
+   const goal=Math.max(0,Number(document.getElementById('trackerGoal'+i).value||0)||0);
+   cfg.items.push({id:'c'+i,name,unit,goal});
+  }
+ }
+ const subjectInput=document.getElementById('subjectAreasInput');
+ if(subjectInput){
+  const oldSubjects=Array.isArray(cfg.subjects)?cfg.subjects:[];
+  const parsed=normalizeSubjectList(subjectInput.value.split(','));
+  // Preserve matching IDs so existing subject history stays attached after renaming/reordering when possible.
+  cfg.subjects=parsed.map((x,i)=>{
+   const same=oldSubjects.find(o=>o.name.trim().toLowerCase()===x.name.trim().toLowerCase());
+   return same?{id:same.id,name:x.name,subareas:Array.isArray(same.subareas)?same.subareas:[]}:{...x,subareas:[]};
+  });
+  if(!cfg.subjects.some(x=>x.id===s.activeSubjectId))s.activeSubjectId=cfg.subjects[0]?.id||'';
+ }
+ // Save optional subareas per subject. Empty = no second level.
+ document.querySelectorAll('[data-subject-subareas]').forEach(inp=>{
+  const subject=cfg.subjects.find(x=>x.id===inp.dataset.subjectSubareas);if(!subject)return;
+  const old=Array.isArray(subject.subareas)?subject.subareas:[];
+  const parsedSubs=normalizeSubareaList(inp.value.split(','));
+  subject.subareas=parsedSubs.map(x=>{
+   const same=old.find(o=>o.name.trim().toLowerCase()===x.name.trim().toLowerCase());
+   return same?{id:same.id,name:x.name}:x;
+  });
+ });
+ const activeSub=cfg.subjects.find(x=>x.id===s.activeSubjectId);
+ if(!activeSub || !(activeSub.subareas||[]).some(x=>x.id===s.activeSubareaId))s.activeSubareaId='';
+ s.studyConfig=cfg;
+ saveWeeklyRoutineFromForm();
+ saveLegacyVisibilityFromForm();
+ save();fillStudySettingsForm();studySettingsStatus.textContent='저장됨 ✓';applyDashboardLayout();if(!ensureUIConfig().initialized)setTimeout(openLayoutSetup,200);
+}
+function currentCategoryLabel(){
+ const cfg=getStudyConfig();
+ if(cfg.mode==='librarian')return '';
+ if(cfg.category==='custom')return cfg.customCategory||'직접 설정';
+ return (CATEGORY_PRESETS[cfg.category]||{}).label||'';
+}
+
+function activeCustomItems(){const c=getStudyConfig();return c.mode==='custom'?c.items.filter(x=>x&&x.name):[]}
+function chgCustom(id,n){
+ ensureStudyConfig();ensureSubjectConfig();const d=s.daily[today];d.custom=d.custom||{};
+ const old=Number(d.custom[id]||0),nv=Math.max(0,old+n),diff=nv-old;
+ d.custom[id]=nv;s.customTotals[id]=Math.max(0,Number(s.customTotals[id]||0)+diff);
+ applySubjectDelta('custom',diff,id);save();
+}
+function customPetProgress(){
+ const items=activeCustomItems();let xp=Math.floor(Number(s.focusSec||0)/1500);
+ for(const item of items){const total=Number(s.customTotals[item.id]||0);xp+=item.goal>0?Math.round(Math.min(1,total/item.goal)*20):Math.min(30,total)}
+ return {st:Math.min(6,Math.floor(xp/20)),pct:Math.min(1,xp/120),xp};
+}
+function renderCustomStudyControls(){
+ const box=document.getElementById('customStudyControls');if(!box)return;
+ const items=activeCustomItems(),d=s.daily[today];
+ if(!items.length){box.innerHTML='<div class="notice">⚙️ 설정에서 기록할 공부항목을 먼저 적어줘.</div>';return}
+ box.innerHTML=items.map(item=>{
+  const v=Number((d.custom||{})[item.id]||0);
+  return `<div class="customTrackerRow"><div><b>${escapeHtml(item.name)}</b><div class="sub">${item.goal>0?'목표 '+item.goal+(item.unit||''):''}</div></div>
+  <div class="ctrl"><button onclick="chgCustom('${item.id}',-1)">−</button><b>${v}${escapeHtml(item.unit||'')}</b><button class="g" onclick="chgCustom('${item.id}',1)">+1</button><button class="g" onclick="chgCustom('${item.id}',5)">+5</button></div></div>`;
+ }).join('');
+}
+function renderCustomTotals(){
+ const box=document.getElementById('customTotalsBody');if(!box)return;
+ const items=activeCustomItems();
+ box.innerHTML=items.length?items.map(item=>{
+  const total=Number(s.customTotals[item.id]||0),goal=Number(item.goal||0),pct=goal?Math.min(100,Math.round(total/goal*100)):0;
+  return `<div class="customTotalRow"><div class="stat"><span>${escapeHtml(item.name)}</span><b>${total}${escapeHtml(item.unit||'')}${goal?' / '+goal+escapeHtml(item.unit||''):''}</b></div>${goal?`<div class="bar"><div style="width:${pct}%"></div></div>`:''}</div>`;
+ }).join(''):'<div class="sub">기록항목이 아직 없어.</div>';
+ if(document.getElementById('customFocusTotal'))customFocusTotal.textContent=hm(s.focusSec||0);
+}
+
+
+let currentAppPage='home';
+function defaultUIConfig(){
+ return {initialized:false,homeBlocks:['today','monitor','pet','progress','daily'],unselectedMode:'index'};
+}
+function ensureUIConfig(){if(!s.uiConfig)s.uiConfig=defaultUIConfig();return s.uiConfig}
+function blockAllowed(block){
+ const cfg=getStudyConfig();
+ if(block==='pet'&&!cfg.tamagotchi)return false;
+ return true;
+}
+function openLayoutSetup(){
+ const ui=ensureUIConfig();
+ document.querySelectorAll('.layoutBlockCheck').forEach(x=>x.checked=ui.homeBlocks.includes(x.value)&&blockAllowed(x.value));
+ const petCheck=document.querySelector('.layoutBlockCheck[value="pet"]');
+ if(petCheck){petCheck.disabled=!getStudyConfig().tamagotchi}
+ const radio=document.querySelector(`input[name="layoutMode"][value="${ui.unselectedMode||'index'}"]`);
+ if(radio)radio.checked=true;
+ layoutModal.style.display='flex';
+}
+function closeLayoutSetup(){layoutModal.style.display='none'}
+function saveLayoutSetup(){
+ const blocks=[...document.querySelectorAll('.layoutBlockCheck:checked')].map(x=>x.value);
+ const mode=document.querySelector('input[name="layoutMode"]:checked')?.value||'index';
+ s.uiConfig={initialized:true,homeBlocks:blocks,unselectedMode:mode};
+ save();closeLayoutSetup();showAppPage('home');
+}
+function showAppPage(page){
+ const ui=ensureUIConfig();
+ if(page==='index'&&ui.unselectedMode==='homeonly')page='home';
+ currentAppPage=page;
+ document.getElementById('navHome').classList.toggle('active',page==='home');
+ document.getElementById('navIndex').classList.toggle('active',page==='index');
+ document.getElementById('navSettings').classList.toggle('active',page==='settings');
+ applyDashboardLayout();
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+function applyDashboardLayout(){
+ const ui=ensureUIConfig(),home=new Set(ui.homeBlocks||[]),cfg=getStudyConfig();
+ const idx=document.getElementById('navIndex');
+ if(idx)idx.style.display=ui.unselectedMode==='homeonly'?'none':'block';
+ document.querySelectorAll('[data-settings-card="1"]').forEach(el=>el.style.display=currentAppPage==='settings'?'block':'none');
+ document.querySelectorAll('[data-block]').forEach(el=>{
+  const b=el.dataset.block,allowed=blockAllowed(b);
+  const requiredMode=el.dataset.studyMode||'';
+  const modeAllowed=!requiredMode||requiredMode===cfg.mode;
+  let show=false;
+  if(currentAppPage==='home')show=allowed&&modeAllowed&&home.has(b);
+  else if(currentAppPage==='index')show=allowed&&modeAllowed&&ui.unselectedMode==='index'&&!home.has(b);
+  el.style.display=show?'block':'none';
+  if(show&&el.style.gridColumn==='1 / -1')el.style.gridColumn='1/-1';
+ });
+ if(currentAppPage==='settings')fillStudySettingsForm();
+}
+function maybeOpenFirstSetup(){
+ const ui=ensureUIConfig(),cfg=getStudyConfig();
+ if(cfg.mode==='custom'&&!cfg.category){
+  currentAppPage='settings';applyDashboardLayout();
+  if(document.getElementById('studySettingsStatus'))studySettingsStatus.textContent='먼저 내 공부 카테고리와 기록항목을 정해줘.';
+  return;
+ }
+ if(!ui.initialized)setTimeout(openLayoutSetup,250);
+}
+
+const SYNC_KEY_STORAGE='oct_tama_sync_key_v1';
+const ACCOUNT_SYNC_STORAGE='oct_tama_account_sync_v1';
+const ACCOUNT_NICK_STORAGE='oct_tama_account_nick_v1';
+
+function newSyncKey(){
+ const a=new Uint8Array(32);crypto.getRandomValues(a);
+ return Array.from(a,b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function deriveSecretKey(value,purpose){
+ const enc=new TextEncoder();
+ const base=await crypto.subtle.importKey('raw',enc.encode(value),'PBKDF2',false,['deriveBits']);
+ const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:enc.encode('study-tamagotchi:'+purpose+':v1'),iterations:120000,hash:'SHA-256'},base,256);
+ return Array.from(new Uint8Array(bits),b=>b.toString(16).padStart(2,'0')).join('');
+}
+function normalizePersonalCode(v){return String(v||'').normalize('NFKC').trim().toLowerCase().replace(/\s+/g,'')}
+async function primaryKeyFromCode(code){return await deriveSecretKey(normalizePersonalCode(code),'user')}
+async function recoveryKeyFromCode(code){return await deriveSecretKey(String(code||'').normalize('NFKC').trim().toUpperCase(),'recovery')}
+function accountSyncKey(){return localStorage.getItem(ACCOUNT_SYNC_STORAGE)||''}
+function syncKey(){
+ const account=accountSyncKey(); if(account)return account;
+ let fromHash='';
+ try{fromHash=new URLSearchParams(location.hash.slice(1)).get('key')||''}catch(e){}
+ if(fromHash&&fromHash.length>=32){localStorage.setItem(SYNC_KEY_STORAGE,fromHash);return fromHash}
+ let saved=localStorage.getItem(SYNC_KEY_STORAGE)||'';
+ if(saved.length>=32)return saved;
+ saved=newSyncKey();localStorage.setItem(SYNC_KEY_STORAGE,saved);return saved;
+}
+function currentAccountNickname(){return localStorage.getItem(ACCOUNT_NICK_STORAGE)||(s&&s.profile&&s.profile.nickname)||''}
+function setAccountLocal(key,nick){localStorage.setItem(ACCOUNT_SYNC_STORAGE,key);localStorage.setItem(ACCOUNT_NICK_STORAGE,nick||'')}
+function clearAccountLocal(){localStorage.removeItem(ACCOUNT_SYNC_STORAGE);localStorage.removeItem(ACCOUNT_NICK_STORAGE)}
+async function remoteLoadKey(key){
+ const r=await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'load',syncKey:key})});
+ if(!r.ok)throw new Error('load failed'); return await r.json();
+}
+async function remoteSaveKey(key,state){
+ const r=await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',syncKey:key,state})});
+ if(!r.ok)throw new Error('save failed'); return await r.json().catch(()=>({ok:true}));
+}
+async function remoteDeleteKey(key){
+ const r=await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',syncKey:key})});
+ if(!r.ok)throw new Error('delete failed');
+ const j=await r.json().catch(()=>({}));
+ if(!j.ok)throw new Error('delete failed');
+ return j;
+}
+function generateRecoveryCode(){
+ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',a=new Uint8Array(12);crypto.getRandomValues(a);
+ const out=Array.from(a,b=>chars[b%chars.length]).join('');return out.match(/.{1,4}/g).join('-');
+}
+function validPersonalCode(code){const n=normalizePersonalCode(code);return n.length>=8&&n.length<=64}
+function accountMsg(text,bad=false){const el=document.getElementById('accountMessage');if(el){el.textContent=text;el.style.color=bad?'#a3264c':'#5f5278'}}
+function renderAccountUI(){
+ const connected=!!accountSyncKey();
+ const off=document.getElementById('accountDisconnected'),on=document.getElementById('accountConnected');
+ if(off)off.style.display=connected?'none':'block';if(on)on.style.display=connected?'block':'none';
+ const nick=currentAccountNickname(),dn=document.getElementById('accountDisplayName');if(dn)dn.textContent=nick||'내 기록';
+ const rn=document.getElementById('roomNickname');if(rn&&!rn.value&&nick)rn.value=nick;
+}
+async function createCodeAccount(){
+ const nick=(document.getElementById('accountNickname')?.value||'').trim().slice(0,20);
+ const code=document.getElementById('accountCode')?.value||'';
+ if(!nick){accountMsg('닉네임을 먼저 적어줘.',true);return}
+ if(!validPersonalCode(code)){accountMsg('내 코드는 최소 8자로 만들어줘.',true);return}
+ accountMsg('코드 확인중…');
+ try{
+  const key=await primaryKeyFromCode(code),existing=await remoteLoadKey(key);
+  if(existing&&existing.state&&existing.state.profile&&existing.state.profile.codeAccount){accountMsg('이미 쓰고 있는 코드야. “전에 썼어요”로 불러와줘.',true);return}
+  s.profile={...(s.profile||{}),nickname:nick,codeAccount:true,createdAt:s.profile?.createdAt||new Date().toISOString()};
+  const recovery=generateRecoveryCode(),rkey=await recoveryKeyFromCode(recovery);
+  await remoteSaveKey(key,s);
+  await remoteSaveKey(rkey,{type:'study-tamagotchi-recovery-v1',primaryKey:key,nickname:nick,createdAt:new Date().toISOString()});
+  setAccountLocal(key,nick);localStorage.setItem(STORAGE,JSON.stringify(s));
+  document.getElementById('recoveryRevealCode').textContent=recovery;document.getElementById('recoveryReveal').style.display='block';
+  accountMsg('');renderAccountUI();render();syncState.textContent='☁ 모든 기기 연동';
+ }catch(e){accountMsg('연결 중 오류가 났어. 잠깐 뒤 다시 눌러줘.',true)}
+}
+async function loginCodeAccount(){
+ const code=document.getElementById('accountCode')?.value||'';
+ if(!validPersonalCode(code)){accountMsg('사용하던 내 코드를 입력해줘.',true);return}
+ accountMsg('기록 불러오는 중…');
+ try{
+  const key=await primaryKeyFromCode(code),j=await remoteLoadKey(key);
+  if(!j||!j.state||!j.state.profile||!j.state.profile.codeAccount){accountMsg('이 코드로 저장된 기록을 찾지 못했어.',true);return}
+  s=j.state;if(!s.daily[today])s.daily[today]={past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,distractSec:0,awayCount:0,phoneCount:0,tabAwaySec:0};
+  const nick=(s.profile&&s.profile.nickname)||'';setAccountLocal(key,nick);localStorage.setItem(STORAGE,JSON.stringify(s));
+  accountMsg('불러왔어 ✓');renderAccountUI();render();syncState.textContent='☁ 모든 기기 연동';
+ }catch(e){accountMsg('불러오는 중 오류가 났어.',true)}
+}
+async function recoverCodeAccount(){
+ const recovery=prompt('복구코드를 입력해줘');if(!recovery)return;
+ const newCode=prompt('앞으로 사용할 새 “내 코드”를 입력해줘. 최소 8자.');if(!newCode)return;
+ if(!validPersonalCode(newCode)){alert('새 코드는 최소 8자로 만들어줘.');return}
+ try{
+  accountMsg('복구중…');const rkey=await recoveryKeyFromCode(recovery),map=await remoteLoadKey(rkey);
+  if(!map||!map.state||map.state.type!=='study-tamagotchi-recovery-v1'||!map.state.primaryKey){accountMsg('복구코드가 맞지 않아.',true);return}
+  const oldKey=map.state.primaryKey,oldData=await remoteLoadKey(oldKey);if(!oldData||!oldData.state){accountMsg('복구할 기록을 찾지 못했어.',true);return}
+  const newKey=await primaryKeyFromCode(newCode),occupied=await remoteLoadKey(newKey);
+  if(occupied&&occupied.state&&occupied.state.profile&&occupied.state.profile.codeAccount){accountMsg('새 코드가 이미 사용 중이야. 다른 코드로 해줘.',true);return}
+  const recovered=oldData.state;recovered.profile={...(recovered.profile||{}),codeAccount:true,recoveredAt:new Date().toISOString()};
+  await remoteSaveKey(newKey,recovered);await remoteSaveKey(rkey,{...map.state,primaryKey:newKey,updatedAt:new Date().toISOString()});
+  await remoteSaveKey(oldKey,{moved:true,movedAt:new Date().toISOString(),message:'This study record was moved to a new personal code.'});
+  s=recovered;if(!s.daily[today])s.daily[today]={past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,distractSec:0,awayCount:0,phoneCount:0,tabAwaySec:0};
+  const nick=(s.profile&&s.profile.nickname)||map.state.nickname||'';setAccountLocal(newKey,nick);localStorage.setItem(STORAGE,JSON.stringify(s));
+  accountMsg('복구 완료 ✓');renderAccountUI();render();syncState.textContent='☁ 모든 기기 연동';
+ }catch(e){accountMsg('복구 중 오류가 났어.',true)}
+}
+function switchCodeAccount(){
+ if(!confirm('로그아웃할까? 이 기기 연결만 해제되고 서버의 공부기록은 그대로 남아.'))return;
+ clearAccountLocal();
+ s=fresh();if(!s.daily[today])s.daily[today]={past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,distractSec:0,awayCount:0,phoneCount:0,tabAwaySec:0};
+ localStorage.setItem(STORAGE,JSON.stringify(s));
+ const c=document.getElementById('accountCode'),n=document.getElementById('accountNickname');if(c)c.value='';if(n)n.value='';
+ accountMsg('로그아웃했어. 다른 코드를 입력하거나 새 계정을 만들 수 있어.');renderAccountUI();render();
+}
+
+async function deleteCodeAccount(){
+ const connectedKey=accountSyncKey();
+ if(!connectedKey){alert('현재 연결된 계정이 없어.');return}
+
+ const nick=currentAccountNickname()||'이 계정';
+ const code=prompt(`"${nick}" 계정을 삭제하려면 현재 내 코드를 다시 입력해줘.\n\n삭제하면 클라우드 공부기록과 복구코드 연결도 삭제돼.`);
+ if(code===null)return;
+ if(!validPersonalCode(code)){alert('코드 형식이 맞지 않아.');return}
+
+ let typedKey='';
+ try{typedKey=await primaryKeyFromCode(code)}
+ catch(e){alert('코드를 확인하지 못했어.');return}
+
+ if(typedKey!==connectedKey){
+  alert('현재 계정의 코드와 일치하지 않아. 삭제하지 않았어.');
+  return;
+ }
+
+ if(!confirm(`정말 "${nick}" 계정을 삭제할까?\n\n이 작업은 되돌릴 수 없고, 서버에 저장된 공부기록도 삭제돼.`))return;
+
+ accountMsg('계정 삭제중…');
+ try{
+  await remoteDeleteKey(connectedKey);
+
+  clearAccountLocal();
+  s=fresh();
+  if(!s.daily[today])s.daily[today]={past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,distractSec:0,awayCount:0,phoneCount:0,tabAwaySec:0};
+  localStorage.setItem(STORAGE,JSON.stringify(s));
+
+  const c=document.getElementById('accountCode'),n=document.getElementById('accountNickname');
+  if(c)c.value='';
+  if(n)n.value='';
+
+  accountMsg('계정을 삭제했어. 새 계정을 만들어도 돼.');
+  renderAccountUI();
+  render();
+  fillStudySettingsForm();
+  syncState.textContent='☁ 계정 없음';
+  alert('계정과 클라우드 기록을 삭제했어.');
+ }catch(e){
+  accountMsg('삭제 중 오류가 났어. 계정은 그대로 유지했어.',true);
+  alert('삭제에 실패했어. 잠깐 뒤 다시 시도해줘.');
+ }
+}
+
+async function copyRecoveryCode(){const code=document.getElementById('recoveryRevealCode')?.textContent||'';if(!code)return;try{await navigator.clipboard.writeText(code);alert('복구코드 복사했어 ✓')}catch(e){prompt('복구코드',code)}}
+function hideRecoveryCode(){const box=document.getElementById('recoveryReveal');if(box)box.style.display='none'}
+let saveTimer;
+function save(){localStorage.setItem(STORAGE,JSON.stringify(s));render();clearTimeout(saveTimer);saveTimer=setTimeout(cloudSave,500)}
+async function cloudLoad(){const k=syncKey();try{
+ const r=await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'load',syncKey:k})});
+ const j=await r.json();
+ if(j.state&&j.state.season==='oct2026-ai'){
+  s=j.state;if(!s.daily[today])s.daily[today]={past:0,variant:0,recall:0,edu:0,read:0,focusSec:0,distractSec:0,awayCount:0,phoneCount:0,tabAwaySec:0};
+  if(s.profile&&s.profile.nickname&&accountSyncKey())localStorage.setItem(ACCOUNT_NICK_STORAGE,s.profile.nickname);
+ }
+ syncState.textContent=accountSyncKey()?'☁ 모든 기기 연동':'☁ 임시 동기화';
+ localStorage.setItem(STORAGE,JSON.stringify(s));ensureStudyConfig();repairLegacyBackgroundTimeBug();ensureUIConfig();renderAccountUI();render();fillStudySettingsForm();maybeOpenFirstSetup();
+}catch(e){syncState.textContent='로컬저장';renderAccountUI();maybeOpenFirstSetup()}}
+async function cloudSave(){const k=syncKey();if(!k)return;try{
+ if(accountSyncKey())s.profile={...(s.profile||{}),nickname:currentAccountNickname()||s.profile?.nickname||'',codeAccount:true};
+ syncState.textContent='☁ 저장중';
+ await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',syncKey:k,state:s})});
+ syncState.textContent=accountSyncKey()?'☁ 모든 기기 연동':'☁ 저장완료';
+}catch(e){syncState.textContent='로컬저장'}}
+function adj(k,n,max=999999){ensureSubjectConfig();const nv=Math.max(0,Math.min(max,(s[k]||0)+n)),a=nv-(s[k]||0);s[k]=nv;s.daily[today][k]=Math.max(0,(s.daily[today][k]||0)+a);applySubjectDelta(k,a);save()}
+function chgPast(n){adj('past',n,592)} function chgVar(n){adj('variant',n)} function chgRecall(n){adj('recall',n)} function chgEdu(n){adj('edu',n)} function chgRead(n){adj('read',n)}
+function phaseStats(p){let v=0,r=0,e=0,rd=0,f=0;for(const [date,d] of Object.entries(s.daily)){if(phase(date)!==p)continue;v+=d.variant||0;r+=d.recall||0;e+=d.edu||0;rd+=d.read||0;f+=d.focusSec||0}return {v,r,e,rd,f}}
+function growth(p){
+ const x=phaseStats(p);
+ if(p===1){
+   const xp=Math.floor(s.past/10)*3+x.r*5+x.e*5+x.rd*2+Math.floor(x.f/1500);
+   const th=[0,12,30,55,85,120];
+   let st=0;for(let i=1;i<=5;i++)if(xp>=th[i])st=i;
+   if(s.past>=592)st=6;
+   return {st,pct:st===6?1:Math.min(.96,xp/145),text:`1호 XP ${xp} · 최종진화 조건: 기출 592`};
+ }
+ const xp=x.v+x.r*5+x.e*5+x.rd*2+Math.floor(x.f/1500),goal=120;
+ return {st:Math.min(6,Math.floor(xp/20)),pct:Math.min(1,xp/goal),text:`주간 XP ${xp}/${goal}`};
+}
+
+function repairLegacyBackgroundTimeBug(){
+ if(s.backgroundBugRepairedV1)return;
+ let changed=false,totalRemoved=0;
+ for(const [date,d] of Object.entries(s.daily||{})){
+  const tab=Number(d.tabAwaySec||0),dist=Number(d.distractSec||0);
+  // Six hours in another tab is not a plausible single active study-monitoring absence
+  // for this app and was produced by the old "count while monitoring is off" bug.
+  if(tab>6*3600){
+   const removable=Math.min(tab,dist);
+   d.distractSec=Math.max(0,dist-removable);
+   d.tabAwaySec=0;
+   totalRemoved+=removable;
+   changed=true;
+  }
+ }
+ if(changed){
+  let rebuiltFocus=0,rebuiltDistract=0,rebuiltTab=0;
+  for(const d of Object.values(s.daily||{})){
+   rebuiltFocus+=Number(d.focusSec||0);
+   rebuiltDistract+=Number(d.distractSec||0);
+   rebuiltTab+=Number(d.tabAwaySec||0);
+  }
+  s.focusSec=rebuiltFocus;
+  s.distractSec=rebuiltDistract;
+  s.tabAwaySec=rebuiltTab;
+ }
+ s.backgroundBugRepairedV1={at:new Date().toISOString(),removedSec:Math.round(totalRemoved)};
+ localStorage.setItem(STORAGE,JSON.stringify(s));
+ return changed;
+}
+
+function dayHasData(d){
+ return ['past','variant','recall','edu','read','focusSec','distractSec','phoneCount','awayCount','tabAwaySec']
+   .some(k=>Number(d[k]||0)>0) || Object.values(d.custom||{}).some(v=>Number(v||0)>0);
+}
+function hm(sec){
+ sec=Math.max(0,Math.floor(sec||0));
+ const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);
+ return h>0?`${h}시간 ${m}분`:`${m}분`;
+}
+function shortDate(ds){
+ const [y,m,d]=ds.split('-');
+ return `${Number(m)}/${Number(d)}`;
+}
+function renderDailyTable(){
+ const repairEl=document.getElementById('repairNotice');
+ if(repairEl){
+  const removed=Number(s.backgroundBugRepairedV1?.removedSec||0);
+  if(removed>0){repairEl.style.display='block';repairEl.textContent='기존 버전에서 잘못 누적된 장시간 백그라운드 딴짓 기록을 자동으로 정리했어.'}
+  else repairEl.style.display='none';
+ }
+ const body=document.getElementById('dailyTableBody'),head=document.getElementById('dailyTableHead');
+ if(!body||!head)return;
+ const cfg=getStudyConfig(),month=today.slice(0,7);
+ const rows=Object.entries(s.daily||{}).filter(([date,d])=>date.startsWith(month)&&dayHasData(d)).sort((a,b)=>a[0].localeCompare(b[0]));
+ let cols=[];
+ if(cfg.mode==='librarian'){
+  cols=[{name:'기출',get:d=>Number(d.past||0)+'문제'},{name:'인출',get:d=>Number(d.recall||0)+'차시'},{name:'교육학',get:d=>Number(d.edu||0)+'묶음'}];
+ }else{
+  cols=activeCustomItems().slice(0,4).map(item=>({name:item.name,get:d=>Number((d.custom||{})[item.id]||0)+(item.unit||'')}));
+ }
+ head.innerHTML='<tr><th>날짜</th><th>집중</th><th>딴짓</th><th>집중률</th>'+cols.map(c=>`<th>${escapeHtml(c.name)}</th>`).join('')+'<th>폰딴짓</th><th>자리이탈</th></tr>';
+ let monthFocus=0,monthDistract=0;body.innerHTML='';
+ if(!rows.length)body.innerHTML=`<tr><td colspan="${6+cols.length}">아직 기록이 없어.</td></tr>`;
+ else for(const [date,d] of rows){
+  const focus=Number(d.focusSec||0),dist=Number(d.distractSec||0),denom=focus+dist;
+  monthFocus+=focus;monthDistract+=dist;
+  const tr=document.createElement('tr');if(date===today)tr.className='todayrow';
+  tr.innerHTML=`<td><b>${shortDate(date)}</b>${date===today?' · 오늘':''}</td><td>${hm(focus)}</td><td>${hm(dist)}</td><td>${denom?Math.round(focus/denom*100)+'%':'--'}</td>`
+   +cols.map(c=>`<td>${escapeHtml(c.get(d))}</td>`).join('')+`<td>${Number(d.phoneCount||0)}회</td><td>${Number(d.awayCount||0)}회</td>`;
+  body.appendChild(tr);
+ }
+ monthFocusEl=document.getElementById('monthFocus');if(monthFocusEl)monthFocusEl.textContent=hm(monthFocus);
+ monthDistractEl=document.getElementById('monthDistract');if(monthDistractEl)monthDistractEl.textContent=hm(monthDistract);
+ const total=monthFocus+monthDistract,rateEl=document.getElementById('monthRate');if(rateEl)rateEl.textContent=total?Math.round(monthFocus/total*100)+'%':'--';
+}
+
+function render(){
+ ensureStudyConfig();ensureLegacyVisibility();ensureSubjectConfig();ensureUIConfig();
+ const cfg=getStudyConfig(),d=s.daily[today];
+
+ const legacy=document.getElementById('legacyStudyControls'),custom=document.getElementById('customStudyControls');
+ if(legacy)legacy.style.display=cfg.mode==='librarian'?'block':'none';
+ const privateLegacyLabel=(cfg.mode==='librarian');
+ const privateRecall=document.getElementById('privateRecallLabel');
+ const privateRecallTotal=document.getElementById('privateRecallTotalLabel');
+ if(privateRecall)privateRecall.textContent=privateLegacyLabel?'채삐 인출':'인출';
+ if(privateRecallTotal)privateRecallTotal.textContent=privateLegacyLabel?'채삐 인출':'인출';
+ if(custom)custom.style.display=cfg.mode==='custom'?'block':'none';
+ const lb=document.getElementById('legacyBossCard'),lt=document.getElementById('legacyTotalsCard'),ct=document.getElementById('customTotalsCard');
+ if(lb)lb.style.display=cfg.mode==='librarian'?'block':'none';
+ if(lt)lt.style.display=cfg.mode==='librarian'?'block':'none';
+ if(ct)ct.style.display=cfg.mode==='custom'?'block':'none';
+ if(document.getElementById('studyTitleTag'))studyTitleTag.textContent=(cfg.title||'내 공부')+(currentCategoryLabel()?' · '+currentCategoryLabel():'');
+
+ // pet rendering
+ if(cfg.mode==='librarian'){
+  const prl=document.getElementById('privateRecallLabel');
+  const prtl=document.getElementById('privateRecallTotalLabel');
+  if(prl)prl.textContent='채삐 인출';
+  if(prtl)prtl.textContent='채삐 인출';
+  const p=previewPetPhase||phase(today),g=growth(p),petDef=pets[p];
+  document.getElementById('pet').textContent=petDef.e[g.st];
+  petName.textContent=petDef.name;stage.textContent=g.st;petBar.style.width=(g.pct*100)+'%';growthText.textContent=g.text;
+  phaseLabel.textContent=p===1?'10/3~10/10 기출 보스':p===2?'10/11~17':p===3?'10/18~24':'10/25~31';
+  speech.textContent=g.st===0?'조금만 해도 자라!':g.st<3?'태어났다! 뭐든 공부하면 먹이가 돼 🌱':g.st<6?'제법 컸다! 계속 먹여줘.':'완전체 달성 ✨';
+  if(document.getElementById('petNav'))petNav.style.display='grid';
+  document.querySelectorAll('.nav div').forEach(el=>el.classList.toggle('on',Number(el.dataset.p)===p));
+  const cur=phase(today);applyLegacyItemVisibility();
+  todayMode.innerHTML='<b>내 공부:</b> 개인 설정 항목과 집중시간을 함께 누적.';
+  pastToday.textContent=d.past||0;varToday.textContent=d.variant||0;recallToday.textContent=d.recall||0;eduToday.textContent=d.edu||0;readToday.textContent=d.read||0;
+  pastTotal.textContent=s.past;pastBar.style.width=(s.past/592*100)+'%';recallTotal.textContent=s.recall;eduTotal.textContent=s.edu;varTotal.textContent=s.variant;readTotal.textContent=s.read;focusTotal.textContent=Math.floor((s.focusSec||0)/60);
+ }else{
+  const prl=document.getElementById('privateRecallLabel');
+  const prtl=document.getElementById('privateRecallTotalLabel');
+  if(prl)prl.textContent='인출';
+  if(prtl)prtl.textContent='인출';
+  const g=customPetProgress(),petIcons=['🥚','🌱','🌿','🪴','🌼','🌳','✨'];
+  document.getElementById('pet').textContent=petIcons[g.st];petName.textContent=(cfg.title||'내 공부')+' 펫';stage.textContent=g.st;petBar.style.width=(g.pct*100)+'%';
+  growthText.textContent=`공부 XP ${g.xp} · 집중 25분과 목표 진행으로 성장`;phaseLabel.textContent=cfg.title||'내 공부';
+  speech.textContent=g.st===0?'조금만 시작해도 자라!':g.st<6?'오늘 한 공부가 먹이가 되고 있어 🌱':'완전체 달성 ✨';
+  if(document.getElementById('petNav'))petNav.style.display='none';
+  todayMode.innerHTML=`<b>${escapeHtml(cfg.title||'내 공부')}:</b> 한 만큼 체크하면 개인 기록에 누적돼.`;
+  renderCustomStudyControls();renderCustomTotals();
+ }
+
+ focusTime.textContent=fmt(d.focusSec||0);distractTime.textContent=fmt(d.distractSec||0);
+ const denom=(d.focusSec||0)+(d.distractSec||0);focusRate.textContent=denom?Math.round((d.focusSec||0)/denom*100)+'%':'--';phoneCount.textContent=(d.phoneCount||0)+'회';
+ renderDailyTable();renderSubjectUI();updateMyRoomCard();applyDashboardLayout();
+}
+let previewPetPhase=null;
+document.querySelectorAll('.nav div').forEach(el=>el.onclick=()=>{
+ previewPetPhase=Number(el.dataset.p);
+ render();
+});
+function fmt(sec){sec=Math.floor(sec);return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')}
+
+/* AI monitor: video stays in-browser; only numeric hand features are stored */
+const CAL_STORAGE='oct_tama_hand_cal_v2';
+const PROFILE_STORAGE='oct_tama_hand_profile_v1';
+function loadCalibration(){
+ let saved=null;
+ try{saved=JSON.parse(localStorage.getItem(CAL_STORAGE)||'null')}catch(e){}
+ if(saved&&saved.front&&saved.side)return saved;
+
+ // 이전 버전 보정값이 있으면 정면 프로필로 자동 이관
+ let old=null;
+ try{old=JSON.parse(localStorage.getItem('oct_tama_hand_cal_v1')||'null')}catch(e){}
+ return {
+  front:{pen:old&&old.pen?old.pen:null,phone:old&&old.phone?old.phone:null},
+  side:{pen:null,phone:null}
+ };
+}
+let cal=loadCalibration();
+let activeProfile=localStorage.getItem(PROFILE_STORAGE)||'front';
+if(!['front','side'].includes(activeProfile))activeProfile='front';
+let stream=null,model=null,handsModel=null,monitoring=false,paused=false,detectTimer=null,tickTimer=null,lastTick=0;
+let absentSince=0,awayLatched=false,hiddenAt=0;
+let phoneSince=0,phoneBlocked=false,phoneLatched=false,phoneRetroDone=false;
+let lastHandFeatures=null,handUpdatedAt=0;
+let calibrationMode=null,calSamples=[],calStartedAt=0;
+let phoneEvidence=0;
+
+const PARTIAL_PHONE_STORAGE='oct_tama_partial_phone_v2';
+function loadPartialPhoneProfiles(){
+ let saved=null;
+ try{saved=JSON.parse(localStorage.getItem(PARTIAL_PHONE_STORAGE)||'null')}catch(e){}
+ if(saved&&Array.isArray(saved.front)&&Array.isArray(saved.side))return saved;
+
+ // migrate v1 single profile into the current active profile
+ let old=null;
+ try{old=JSON.parse(localStorage.getItem('oct_tama_partial_phone_v1')||'null')}catch(e){}
+ return {front:old?[old]:[],side:[]};
+}
+let partialPhoneProfiles=loadPartialPhoneProfiles();
+let partialPhoneCalibrating=false;
+let partialPhoneCalStartedAt=0;
+let partialPhoneSamples=[];
+let partialPhoneEvidence=0;
+let phoneProbeCanvas=null,phoneProbeCtx=null;
+
+function ensurePhoneProbeCanvas(){
+ if(phoneProbeCanvas)return;
+ phoneProbeCanvas=document.createElement('canvas');
+ phoneProbeCanvas.width=96;phoneProbeCanvas.height=72;
+ phoneProbeCtx=phoneProbeCanvas.getContext('2d',{willReadFrequently:true});
+}
+function centerProbeRect(){
+ // Same center area shown by the guide box.
+ const w=cam.videoWidth||640,h=cam.videoHeight||480;
+ return {x:w*.33,y:h*.30,w:w*.34,h:h*.40};
+}
+function handProbeRect(){
+ if(!lastHandLandmarks)return null;
+ const w=cam.videoWidth||640,h=cam.videoHeight||480;
+ let xs=lastHandLandmarks.map(p=>p.x*w),ys=lastHandLandmarks.map(p=>p.y*h);
+ let minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+ const bw=maxX-minX,bh=maxY-minY,pad=Math.max(bw,bh)*.45;
+ return {
+  x:Math.max(0,minX-pad),
+  y:Math.max(0,minY-pad),
+  w:Math.min(w, bw+2*pad),
+  h:Math.min(h, bh+2*pad)
+ };
+}
+function sampleRectSignature(rect){
+ ensurePhoneProbeCanvas();
+ if(!rect||cam.readyState<2)return null;
+ const vw=cam.videoWidth||640,vh=cam.videoHeight||480;
+ const sx=Math.max(0,Math.min(vw-2,rect.x)),sy=Math.max(0,Math.min(vh-2,rect.y));
+ const sw=Math.max(2,Math.min(vw-sx,rect.w)),sh=Math.max(2,Math.min(vh-sy,rect.h));
+ phoneProbeCtx.drawImage(cam,sx,sy,sw,sh,0,0,96,72);
+ const d=phoneProbeCtx.getImageData(0,0,96,72).data;
+ let rs=0,gs=0,bs=0,ls=0,l2=0,dark=0,edge=0,count=0;
+ let prevL=null;
+ for(let i=0;i<d.length;i+=16){ // sample every 4 pixels
+  const r=d[i],g=d[i+1],b=d[i+2];
+  const l=.299*r+.587*g+.114*b;
+  rs+=r;gs+=g;bs+=b;ls+=l;l2+=l*l;
+  if(l<70)dark++;
+  if(prevL!==null && Math.abs(l-prevL)>38)edge++;
+  prevL=l;count++;
+ }
+ if(!count)return null;
+ const meanL=ls/count,varL=Math.max(0,l2/count-meanL*meanL);
+ return {r:rs/count,g:gs/count,b:bs/count,l:meanL,contrast:Math.sqrt(varL),dark:dark/count,edge:edge/count};
+}
+function avgSignature(samples){
+ if(!samples.length)return null;
+ const keys=['r','g','b','l','contrast','dark','edge'],out={};
+ for(const k of keys)out[k]=samples.reduce((a,x)=>a+(x[k]||0),0)/samples.length;
+ return out;
+}
+function partialSignatureDistance(a,b){
+ if(!a||!b)return Infinity;
+ // Color/brightness dominate; texture (dark lens + edges) acts as supporting evidence.
+ const color=Math.sqrt(((a.r-b.r)/255)**2+((a.g-b.g)/255)**2+((a.b-b.b)/255)**2)/Math.sqrt(3);
+ const lum=Math.abs(a.l-b.l)/255;
+ const contrast=Math.abs(a.contrast-b.contrast)/100;
+ const dark=Math.abs(a.dark-b.dark);
+ const edge=Math.abs(a.edge-b.edge);
+ return .42*color+.18*lum+.16*contrast+.14*dark+.10*edge;
+}
+function partialPhoneLimit(profile){
+ return profile==='front'?3:2;
+}
+function currentPartialPhoneProfiles(){
+ if(!partialPhoneProfiles[activeProfile])partialPhoneProfiles[activeProfile]=[];
+ return partialPhoneProfiles[activeProfile];
+}
+function savePartialPhoneProfiles(){
+ localStorage.setItem(PARTIAL_PHONE_STORAGE,JSON.stringify(partialPhoneProfiles));
+}
+function startPartialPhoneCalibration(){
+ if(!monitoring){alert('먼저 감시 시작을 눌러 카메라를 켜줘!');return}
+ const list=currentPartialPhoneProfiles(),limit=partialPhoneLimit(activeProfile);
+ if(list.length>=limit){
+  alert(profileLabel(activeProfile)+' 부분폰 보정은 최대 '+limit+'개까지 저장돼. 필요하면 현재 프로필 보정을 삭제한 뒤 다시 추가해줘.');
+  return;
+ }
+ partialPhoneCalibrating=true;partialPhoneCalStartedAt=Date.now();partialPhoneSamples=[];
+ const g=document.getElementById('phoneGuide');if(g)g.style.display='block';
+ const st=document.getElementById('partialPhoneStatus');
+ if(st)st.textContent=profileLabel(activeProfile)+' '+(list.length+1)+'번째 자세 보정중 · 폰 윗부분/카메라섬을 점선 안에 넣어줘 · 7초';
+}
+function clearPartialPhoneCalibration(){
+ partialPhoneProfiles[activeProfile]=[];partialPhoneEvidence=0;
+ savePartialPhoneProfiles();
+ updatePartialPhoneStatus();
+}
+function finishPartialPhoneCalibration(){
+ if(!partialPhoneCalibrating)return;
+ partialPhoneCalibrating=false;
+ const g=document.getElementById('phoneGuide');if(g)g.style.display='none';
+ if(partialPhoneSamples.length>=5){
+  const sig=avgSignature(partialPhoneSamples);
+  const list=currentPartialPhoneProfiles(),limit=partialPhoneLimit(activeProfile);
+  if(sig&&list.length<limit){
+   list.push(sig);
+   savePartialPhoneProfiles();
+  }
+ }
+ partialPhoneSamples=[];
+ updatePartialPhoneStatus();
+}
+function updatePartialPhoneStatus(){
+ const st=document.getElementById('partialPhoneStatus');if(!st)return;
+ const frontCount=(partialPhoneProfiles.front||[]).length;
+ const sideCount=(partialPhoneProfiles.side||[]).length;
+ if(partialPhoneCalibrating){
+  const left=Math.max(0,7-(Date.now()-partialPhoneCalStartedAt)/1000);
+  st.textContent=profileLabel(activeProfile)+' 부분폰 보정중 · '+left.toFixed(1)+'초';
+ }else{
+  st.textContent='정면 '+frontCount+'/3 · 측면 '+sideCount+'/2'
+   +((frontCount+sideCount)>0?' · 저장된 여러 자세 중 하나라도 맞으면 보조 판정':' · 부분폰 보정 미완료');
+ }
+}
+function detectPartialPhoneNearHand(){
+ const profiles=currentPartialPhoneProfiles();
+ if(!profiles.length||!lastHandLandmarks||Date.now()-handUpdatedAt>2500)return false;
+ const sig=sampleRectSignature(handProbeRect());
+ if(!sig)return false;
+ const structure=(sig.dark>0.05 || sig.edge>0.06);
+ if(!structure)return false;
+ let best=Infinity;
+ for(const p of profiles)best=Math.min(best,partialSignatureDistance(sig,p));
+ return best<0.12;
+}
+
+
+function ensureDailyFields(){
+ const d=s.daily[today];
+ for(const k of ['focusSec','distractSec','awayCount','phoneCount','tabAwaySec']) if(d[k]==null)d[k]=0;
+ for(const k of ['focusSec','distractSec','awayCount','phoneCount','tabAwaySec']) if(s[k]==null)s[k]=0;
+}
+ensureDailyFields();
+
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y,(a.z||0)-(b.z||0))}
+function angle3(a,b,c){
+ const ux=a.x-b.x,uy=a.y-b.y,uz=(a.z||0)-(b.z||0);
+ const vx=c.x-b.x,vy=c.y-b.y,vz=(c.z||0)-(b.z||0);
+ const dot=ux*vx+uy*vy+uz*vz,nu=Math.hypot(ux,uy,uz),nv=Math.hypot(vx,vy,vz);
+ return Math.acos(Math.max(-1,Math.min(1,dot/(nu*nv+1e-8))))/Math.PI;
+}
+function handFeatures(lm){
+ const scale=Math.max(.03,dist(lm[0],lm[9])),D=(i,j)=>dist(lm[i],lm[j])/scale;
+ return [D(4,8),D(4,12),D(8,12),D(8,20),D(0,8),D(0,12),D(0,16),D(0,20),
+ angle3(lm[5],lm[6],lm[8]),angle3(lm[9],lm[10],lm[12]),angle3(lm[13],lm[14],lm[16]),
+ angle3(lm[17],lm[18],lm[20]),angle3(lm[2],lm[3],lm[4]),
+ (lm[9].x-lm[0].x)/scale,(lm[9].y-lm[0].y)/scale];
+}
+function centroid(samples){
+ if(!samples.length)return null;
+ const out=new Array(samples[0].length).fill(0);
+ for(const x of samples)for(let i=0;i<x.length;i++)out[i]+=x[i];
+ return out.map(v=>v/samples.length);
+}
+function vecDist(a,b){if(!a||!b)return Infinity;let z=0;for(let i=0;i<a.length;i++){const q=a[i]-b[i];z+=q*q}return Math.sqrt(z/a.length)}
+function profileLabel(p){return p==='front'?'정면':'측면'}
+function selectProfile(p){
+ if(!['front','side'].includes(p))return;
+ activeProfile=p;
+ localStorage.setItem(PROFILE_STORAGE,p);
+ phoneSince=0;phoneBlocked=false;phoneLatched=false;phoneRetroDone=false;phoneEvidence=0;partialPhoneEvidence=0;
+ updateCalStatus();updatePartialPhoneStatus();
+ if(monitoring)setMonitor('📷 '+profileLabel(p)+' 프로필로 전환 · 재감지중',null);
+}
+function updateCalStatus(){
+ const el=document.getElementById('calStatus'); if(!el)return;
+ const cur=cal[activeProfile]||{pen:null,phone:null};
+ const fb=document.getElementById('profileFrontBtn');
+ const sb=document.getElementById('profileSideBtn');
+ if(fb)fb.classList.toggle('active',activeProfile==='front');
+ if(sb)sb.classList.toggle('active',activeProfile==='side');
+
+ if(calibrationMode){
+  const left=Math.max(0,8-(Date.now()-calStartedAt)/1000);
+  el.textContent='['+profileLabel(activeProfile)+'] '+(calibrationMode==='pen'?'✏️ 펜 보정중 ':'📱 폰 보정중 ')+left.toFixed(1)+'초';
+ }else{
+  const front=cal.front||{pen:null,phone:null},side=cal.side||{pen:null,phone:null};
+  el.textContent='현재 '+profileLabel(activeProfile)+' · 펜 '+(cur.pen?'✓':'미보정')+' · 폰 '+(cur.phone?'✓':'미보정')
+   +'  |  정면 '+(front.pen&&front.phone?'완료':'미완료')
+   +' · 측면 '+(side.pen&&side.phone?'완료':'미완료');
+ }
+}
+function startCalibration(kind){
+ if(!monitoring){alert('먼저 감시 시작을 눌러 카메라를 켜줘!');return}
+ calibrationMode=kind;calSamples=[];calStartedAt=Date.now();updateCalStatus();
+}
+function clearCalibration(){
+ cal[activeProfile]={pen:null,phone:null};
+ localStorage.setItem(CAL_STORAGE,JSON.stringify(cal));
+ updateCalStatus();
+}
+function finishCalibration(){
+ if(!calibrationMode)return;
+ if(calSamples.length>=5){
+  if(!cal[activeProfile])cal[activeProfile]={pen:null,phone:null};
+  cal[activeProfile][calibrationMode]=centroid(calSamples);
+  localStorage.setItem(CAL_STORAGE,JSON.stringify(cal));
+ }
+ calibrationMode=null;calSamples=[];updateCalStatus();
+}
+function classifyHand(){
+ const cur=cal[activeProfile]||{pen:null,phone:null};
+ if(!lastHandFeatures||Date.now()-handUpdatedAt>2500||!cur.pen||!cur.phone)return {kind:'unknown',confidence:0};
+ const dp=vecDist(lastHandFeatures,cur.pen),dh=vecDist(lastHandFeatures,cur.phone),sum=dp+dh+1e-8;
+ return {kind:dh<dp?'phone':'pen',confidence:Math.abs(dp-dh)/sum};
+}
+async function initHands(){
+ if(handsModel)return;
+ handsModel=new Hands({locateFile:(f)=>'https://cdn.jsdelivr.net/npm/@mediapipe/hands/'+f});
+ handsModel.setOptions({maxNumHands:1,modelComplexity:0,minDetectionConfidence:.45,minTrackingConfidence:.45});
+ handsModel.onResults(res=>{
+  if(res.multiHandLandmarks&&res.multiHandLandmarks[0]){
+   lastHandLandmarks=res.multiHandLandmarks[0].map(p=>({x:p.x,y:p.y,z:p.z||0}));
+   lastHandFeatures=handFeatures(res.multiHandLandmarks[0]);handUpdatedAt=Date.now();
+   if(calibrationMode)calSamples.push(lastHandFeatures.slice());
+  }else{
+   lastHandLandmarks=null;
+  }
+ });
+}
+async function startMonitor(){
+ if(monitoring)return;
+ try{
+  modelStatus.textContent='AI 로딩중…';
+  if(!model)model=await cocoSsd.load({base:'lite_mobilenet_v2'});
+  await initHands();
+  modelStatus.textContent='AI 준비됨';updateCalStatus();
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
+  cam.srcObject=stream;await cam.play();const rv=document.getElementById('roomLocalVideo');if(rv)rv.srcObject=stream;monitoring=true;lastTick=performance.now();setMonitor('감시중',true);
+  tickTimer=setInterval(focusTick,1000);detectLoop();updateCalStatus();
+ }catch(e){setMonitor('카메라/AI 실행 실패',false);modelStatus.textContent='권한 확인'}
+}
+
+function togglePause(){
+ if(!monitoring)return;
+ paused=!paused;
+ const b=document.getElementById('pauseBtn');
+ if(paused){
+  b.textContent='▶ 재개';
+  setMonitor('⏸ 일시정지 · 시간 기록 안 함',null);
+  absentSince=0;awayLatched=false;
+  phoneSince=0;phoneBlocked=false;phoneLatched=false;phoneRetroDone=false;phoneEvidence=0;partialPhoneEvidence=0;
+ }else{
+  b.textContent='⏸ 일시정지';
+  lastTick=performance.now();
+  absentSince=0;awayLatched=false;
+  phoneSince=0;phoneBlocked=false;phoneLatched=false;phoneRetroDone=false;phoneEvidence=0;partialPhoneEvidence=0;
+  setMonitor('재개 · 재감지중',null);
+ }
+}
+function stopMonitor(){
+ monitoring=false;paused=false;phoneEvidence=0;const pb=document.getElementById('pauseBtn');if(pb)pb.textContent='⏸ 일시정지';if(detectTimer)clearTimeout(detectTimer);if(tickTimer)clearInterval(tickTimer);
+ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+ cam.srcObject=null;const rv=document.getElementById('roomLocalVideo');if(rv)rv.srcObject=null;setMonitor('종료됨',null);save()
+}
+let currentStudyActivity='대기중';
+function setMonitor(t,ok){
+ currentStudyActivity=t;
+ monitorStatus.textContent=t;
+ lamp.className='lamp '+(ok===true?'ok':ok===false?'bad':'wait');
+ updateMyRoomCard();
+}
+function addFocus(sec){ensureSubjectConfig();s.focusSec=(s.focusSec||0)+sec;s.daily[today].focusSec=(s.daily[today].focusSec||0)+sec;applySubjectDelta('focusSec',sec)}
+function addDistract(sec){ensureSubjectConfig();s.distractSec=(s.distractSec||0)+sec;s.daily[today].distractSec=(s.daily[today].distractSec||0)+sec;applySubjectDelta('distractSec',sec)}
+function focusTick(){
+ if(!monitoring||document.hidden||paused)return;
+ const now=performance.now(),dt=Math.max(0,(now-lastTick)/1000);lastTick=now;
+ const away=absentSince&&((Date.now()-absentSince)/1000>=20);
+ if(phoneBlocked||away)addDistract(dt); else if(!absentSince)addFocus(dt);
+ render();updateCalStatus();
+}
+async function detectLoop(){
+ if(!monitoring)return;
+ if(paused){
+  detectTimer=setTimeout(detectLoop,800);
+  return;
+ }
+ try{
+  if(cam.readyState>=2){
+   const preds=await model.detect(cam);
+   await handsModel.send({image:cam}).catch(()=>{});
+   if(calibrationMode&&Date.now()-calStartedAt>=8000)finishCalibration();
+
+   const person=preds.some(x=>x.class==='person'&&x.score>=.42);
+   const phoneDetections=preds.filter(x=>x.class==='cell phone'&&x.score>=.40);
+   const phoneObj=phoneDetections.length>0;
+   const hc=classifyHand();
+
+   if(partialPhoneCalibrating){
+    const sig=sampleRectSignature(centerProbeRect());
+    if(sig)partialPhoneSamples.push(sig);
+    updatePartialPhoneStatus();
+    if(Date.now()-partialPhoneCalStartedAt>=7000)finishPartialPhoneCalibration();
+   }
+
+   const partialPhone=detectPartialPhoneNearHand();
+
+   // Priority 1: actual 'cell phone' object.
+   // Priority 2: optional user-calibrated partial-phone appearance near the detected hand.
+   // Hand pose ALONE never marks phone use.
+   if(phoneObj)phoneEvidence=Math.min(6,(phoneEvidence||0)+2);
+   else if(partialPhone)phoneEvidence=Math.min(6,(phoneEvidence||0)+1);
+   else phoneEvidence=Math.max(0,(phoneEvidence||0)-1);
+
+   if(partialPhone)partialPhoneEvidence=Math.min(6,(partialPhoneEvidence||0)+1);
+   else partialPhoneEvidence=Math.max(0,(partialPhoneEvidence||0)-1);
+
+   const phone=phoneEvidence>=3 || partialPhoneEvidence>=3;
+
+   if(person){absentSince=0;awayLatched=false}
+   else{
+    if(!absentSince)absentSince=Date.now();
+    const sec=(Date.now()-absentSince)/1000;
+    if(sec>=20&&!awayLatched){awayLatched=true;s.awayCount++;s.daily[today].awayCount++;addDistract(20);save()}
+   }
+
+   if(phone&&person){
+    if(!phoneSince)phoneSince=Date.now();
+    const psec=(Date.now()-phoneSince)/1000;
+    if(psec>=30){
+     phoneBlocked=true;
+     if(!phoneLatched){phoneLatched=true;s.phoneCount++;s.daily[today].phoneCount++}
+     if(!phoneRetroDone){
+      const move=Math.min(30,s.daily[today].focusSec||0);
+      s.daily[today].focusSec-=move;s.focusSec=Math.max(0,s.focusSec-move);
+      addDistract(30);phoneRetroDone=true;save();
+     }
+     setMonitor('📵 폰 사용 · 딴짓시간 기록중',false);
+    }else if(psec>=10)setMonitor('📱 폰 내려놔!! '+Math.floor(psec)+'초',false);
+    else setMonitor('폰 의심 · 관찰중 '+Math.floor(psec)+'초',null);
+   }else{
+    phoneSince=0;phoneBlocked=false;phoneLatched=false;phoneRetroDone=false;
+    if(!person){const sec=(Date.now()-absentSince)/1000;setMonitor(sec>=20?'🚪 자리이탈 · 딴짓시간 기록중':'잠깐 안 보임',false)}
+    else if(hc.kind==='pen'&&hc.confidence>=.08)setMonitor('✏️ 필기 중 · 집중',true);
+    else setMonitor('📚 자리 있음 · 집중',true);
+   }
+  }
+ }catch(e){modelStatus.textContent='AI 판정 오류'}
+ detectTimer=setTimeout(detectLoop,1200);
+}
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden){
+  // Only start counting tab-away if an actual monitoring session is running.
+  hiddenAt=(monitoring&&!paused)?Date.now():0;
+  if(monitoring&&!paused)setMonitor('다른 앱/탭으로 이동',false);
+ }
+ else if(hiddenAt){
+  const sec=(Date.now()-hiddenAt)/1000;hiddenAt=0;lastTick=performance.now();
+  if(monitoring&&!paused&&sec>=3){
+   // A monitoring session should never silently accumulate an entire day in the background.
+   const safeSec=Math.min(sec,60*60);
+   s.tabAwaySec=(s.tabAwaySec||0)+safeSec;
+   s.daily[today].tabAwaySec=(s.daily[today].tabAwaySec||0)+safeSec;
+   addDistract(safeSec);save();
+  }
+  if(monitoring)setMonitor(paused?'⏸ 일시정지 · 시간 기록 안 함':'복귀 · 재감지중',null);
+ }
+});
+
+/* ===== 4-person cam-study: host approval + Supabase Realtime signaling + WebRTC mesh ===== */
+const ROOM_NAME_KEY='oct_tama_room_nickname_v1';
+const ROOM_CLIENT_KEY='oct_tama_room_client_id_v2';
+const ROOM_MAX=4;
+let roomClientId=sessionStorage.getItem(ROOM_CLIENT_KEY);
+if(!roomClientId){
+ roomClientId=crypto.randomUUID?crypto.randomUUID():randomRoomToken(24);
+ sessionStorage.setItem(ROOM_CLIENT_KEY,roomClientId);
+}
+
+let roomChannel=null,roomCodeActive='',roomJoined=false,isRoomHost=false,roomHostId=null;
+let roomStatusTimer=null,videoShareEnabled=true;
+const peerConnections=new Map();       // peerId -> {pc,sender,pendingIce}
+const remoteStates=new Map();          // peerId -> study status
+const pendingJoinRequests=new Map();   // host only
+const hostApprovedIds=new Set();       // host only: immediately reserved slots
+
+function randomRoomToken(len=24){
+ const arr=new Uint8Array(len);
+ crypto.getRandomValues(arr);
+ return Array.from(arr,b=>('0'+b.toString(16)).slice(-2)).join('').slice(0,len);
+}
+function cleanRoomCode(v){return String(v||'').trim().replace(/[^A-Za-z0-9_-]/g,'').slice(0,40)}
+function roomNick(){
+ const el=document.getElementById('roomNickname');
+ return ((el&&el.value)||currentAccountNickname()||localStorage.getItem(ROOM_NAME_KEY)||'친구').trim().slice(0,20)||'친구';
+}
+function saveRoomNick(){
+ const n=roomNick();localStorage.setItem(ROOM_NAME_KEY,n);
+ const e=document.getElementById('myRoomName');if(e)e.textContent=n;
+}
+function setRoomUI(text,state='wait'){
+ const t=document.getElementById('roomStatusText'),l=document.getElementById('roomLamp');
+ if(t)t.textContent=text;
+ if(l)l.className='onlineDot '+(state==='on'?'on':'wait');
+}
+function getTodayRoomStats(){
+ const d=s.daily[today]||{};
+ const focus=Number(d.focusSec||0),dist=Number(d.distractSec||0),den=focus+dist;
+ return {focusSec:focus,distractSec:dist,rate:den?Math.round(focus/den*100):null,
+  phoneCount:Number(d.phoneCount||0),awayCount:Number(d.awayCount||0)};
+}
+function roomActivity(){
+ if(paused)return '⏸ 휴식';
+ if(!monitoring)return '⚪ 감시 꺼짐';
+ if(phoneBlocked)return '📵 폰딴짓';
+ if(absentSince&&((Date.now()-absentSince)/1000>=20))return '🚪 자리이탈';
+ if(currentStudyActivity.includes('필기'))return '✏️ 필기 중';
+ if(currentStudyActivity.includes('폰'))return '📱 폰 의심';
+ return '🟢 집중 중';
+}
+function prettyMinutes(sec){
+ sec=Math.max(0,Number(sec||0));
+ const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);
+ return h?`${h}시간 ${m}분`:`${m}분`;
+}
+function updateMyRoomCard(){
+ const st=getTodayRoomStats(),den=st.focusSec+st.distractSec;
+ const n=document.getElementById('myRoomName'),a=document.getElementById('myRoomActivity');
+ if(n)n.textContent=roomNick();
+ if(a)a.textContent=roomActivity();
+ const hb=document.getElementById('hostBadge');
+ if(hb)hb.innerHTML=isRoomHost?'<span class="hostTag">방장</span>':'';
+ const f=document.getElementById('myRoomFocus'),d=document.getElementById('myRoomDistract'),r=document.getElementById('myRoomRate');
+ if(f)f.textContent=prettyMinutes(st.focusSec);
+ if(d)d.textContent=prettyMinutes(st.distractSec);
+ if(r)r.textContent=den?Math.round(st.focusSec/den*100)+'%':'--';
+ updateRoomCount();
+}
+function roomPayload(){
+ const st=getTodayRoomStats();
+ return {id:roomClientId,nickname:roomNick(),activity:roomActivity(),date:today,
+  focusSec:st.focusSec,distractSec:st.distractSec,rate:st.rate,
+  phoneCount:st.phoneCount,awayCount:st.awayCount,video:videoShareEnabled,
+  host:isRoomHost,approved:roomJoined,ts:Date.now()};
+}
+async function broadcastRaw(event,payload){
+ if(!roomChannel)return;
+ try{await roomChannel.send({type:'broadcast',event,payload:{from:roomClientId,...payload}})}catch(e){}
+}
+async function sendRoomStatus(){
+ if(!roomJoined)return;
+ updateMyRoomCard();
+ await broadcastRaw('study-status',roomPayload());
+}
+function getInviteRoomFromHash(){
+ try{return cleanRoomCode(new URLSearchParams(location.hash.slice(1)).get('room')||'')}catch(e){return ''}
+}
+function createRoomInviteUrl(){
+ const code=cleanRoomCode((document.getElementById('roomCode')||{}).value||roomCodeActive);
+ if(!code)return '';
+ return `${location.origin}${location.pathname}#room=${encodeURIComponent(code)}`;
+}
+async function copyRoomInvite(){
+ const url=createRoomInviteUrl();
+ if(!url){alert('먼저 방을 만들어줘!');return}
+ try{await navigator.clipboard.writeText(url);setRoomUI('초대링크 복사됨 ✓','on')}
+ catch(e){prompt('이 링크를 친구에게 보내줘',url)}
+}
+function approvedPresence(){
+ if(!roomChannel)return [];
+ const state=roomChannel.presenceState()||{};
+ return Object.values(state).flat().filter(x=>x&&x.id&&x.approved===true);
+}
+function approvedParticipantIds(){
+ return new Set(approvedPresence().map(x=>x.id));
+}
+function updateRoomCount(){
+ const c=document.getElementById('roomCount');
+ let count=roomJoined?approvedPresence().length:0;
+ if(isRoomHost){
+  // host may approve someone a fraction before presence sync catches up
+  count=Math.max(count,1+hostApprovedIds.size);
+ }
+ if(c)c.textContent=Math.min(ROOM_MAX,count)+'/'+ROOM_MAX;
+}
+function ensureRemoteCard(peerId,nickname='친구',host=false){
+ let card=document.getElementById('peerCard_'+peerId);
+ if(card)return card;
+ const wrap=document.getElementById('remoteRoomCards');
+ if(!wrap)return null;
+ card=document.createElement('div');
+ card.className='videobox';
+ card.id='peerCard_'+peerId;
+ card.innerHTML=`
+  <div class="videohead">
+   <span><span id="peerName_${peerId}"></span> <span id="peerHost_${peerId}"></span></span>
+   <span id="peerActivity_${peerId}">연결중</span>
+  </div>
+  <video id="peerVideo_${peerId}" playsinline autoplay></video>
+  <div class="peerstatus">
+   <div class="peerstats">
+    <div>집중<br><b id="peerFocus_${peerId}">-</b></div>
+    <div>딴짓<br><b id="peerDistract_${peerId}">-</b></div>
+    <div>집중률<br><b id="peerRate_${peerId}">-</b></div>
+   </div>
+  </div>`;
+ wrap.appendChild(card);
+ const ne=document.getElementById('peerName_'+peerId);if(ne)ne.textContent=nickname||'친구';
+ const he=document.getElementById('peerHost_'+peerId);if(he)he.innerHTML=host?'<span class="hostTag">방장</span>':'';
+ return card;
+}
+function updateRemoteCard(peerId,data){
+ if(!data)return;
+ remoteStates.set(peerId,data);
+ ensureRemoteCard(peerId,data.nickname,data.host);
+ const ne=document.getElementById('peerName_'+peerId);if(ne)ne.textContent=data.nickname||'친구';
+ const he=document.getElementById('peerHost_'+peerId);if(he)he.innerHTML=data.host?'<span class="hostTag">방장</span>':'';
+ const ae=document.getElementById('peerActivity_'+peerId);
+ if(ae)ae.textContent=(data.activity||'연결됨')+(data.video===false?' · 영상OFF':'');
+ const fe=document.getElementById('peerFocus_'+peerId);if(fe)fe.textContent=prettyMinutes(data.focusSec||0);
+ const de=document.getElementById('peerDistract_'+peerId);if(de)de.textContent=prettyMinutes(data.distractSec||0);
+ const re=document.getElementById('peerRate_'+peerId);if(re)re.textContent=data.rate==null?'--':data.rate+'%';
+}
+function removeRemoteCard(peerId){
+ const el=document.getElementById('peerCard_'+peerId);if(el)el.remove();
+ remoteStates.delete(peerId);
+}
+function renderJoinRequests(){
+ const panel=document.getElementById('joinRequestPanel'),list=document.getElementById('joinRequestList');
+ if(!panel||!list)return;
+ if(!isRoomHost||pendingJoinRequests.size===0){
+  panel.style.display='none';list.innerHTML='';return;
+ }
+ panel.style.display='block';list.innerHTML='';
+ for(const [id,req] of pendingJoinRequests){
+  const row=document.createElement('div');row.className='joinReq';
+  const full=(1+hostApprovedIds.size)>=ROOM_MAX;
+  row.innerHTML=`<span><b>${escapeHtml(req.nickname||'친구')}</b> 님이 들어오려고 해</span>
+   <span class="ctrl">
+    <button class="g" ${full?'disabled':''} onclick="approveJoinRequest('${id}')">${full?'정원참':'수락'}</button>
+    <button class="p" onclick="rejectJoinRequest('${id}')">거절</button>
+   </span>`;
+  list.appendChild(row);
+ }
+}
+function escapeHtml(v){
+ return String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+async function approveJoinRequest(id){
+ if(!isRoomHost||!pendingJoinRequests.has(id))return;
+ if(1+hostApprovedIds.size>=ROOM_MAX){
+  setRoomUI('정원이 4명이라 더 받을 수 없어','wait');renderJoinRequests();return;
+ }
+ hostApprovedIds.add(id);
+ pendingJoinRequests.delete(id);
+ await broadcastRaw('join-response',{to:id,approved:true,hostId:roomClientId});
+ renderJoinRequests();updateRoomCount();
+}
+async function rejectJoinRequest(id){
+ if(!isRoomHost)return;
+ pendingJoinRequests.delete(id);
+ await broadcastRaw('join-response',{to:id,approved:false,hostId:roomClientId});
+ renderJoinRequests();
+}
+async function createStudyRoom(){
+ if(roomChannel)await leaveStudyRoom();
+ const code=randomRoomToken(24);
+ document.getElementById('roomCode').value=code;
+ isRoomHost=true;roomHostId=roomClientId;
+ await connectRoomChannel(code,true);
+}
+async function joinStudyRoom(){
+ if(roomChannel){setRoomUI(roomJoined?'이미 이 방에 들어와 있어':'입장 승인을 기다리는 중','on');return}
+ isRoomHost=false;roomHostId=null;
+ saveRoomNick();
+ const code=cleanRoomCode(document.getElementById('roomCode').value);
+ if(!code){alert('방 코드를 입력하거나 초대링크로 들어와줘!');return}
+ await connectRoomChannel(code,false);
+}
+async function connectRoomChannel(code,asHost){
+ saveRoomNick();
+ document.getElementById('roomCode').value=code;
+ if(!monitoring)await startMonitor();
+ if(!stream){alert('카메라를 먼저 켜야 캠스터디를 쓸 수 있어.');return}
+
+ roomCodeActive=code;
+ setRoomUI(asHost?'방 만드는 중…':'방장에게 입장 요청 보내는 중…','wait');
+ roomChannel=sb.channel('study-room:'+code,{
+  config:{broadcast:{self:false,ack:true},presence:{key:roomClientId}}
+ });
+ roomChannel
+  .on('broadcast',{event:'join-request'},({payload})=>{
+    if(!isRoomHost||!payload||payload.from===roomClientId)return;
+    if(hostApprovedIds.has(payload.from))return;
+    pendingJoinRequests.set(payload.from,{nickname:payload.nickname||'친구',ts:Date.now()});
+    renderJoinRequests();
+  })
+  .on('broadcast',{event:'join-response'},async ({payload})=>{
+    if(!payload||payload.to!==roomClientId||isRoomHost)return;
+    roomHostId=payload.hostId||null;
+    if(payload.approved){
+      roomJoined=true;
+      await roomChannel.track({id:roomClientId,nickname:roomNick(),approved:true,host:false,joinedAt:Date.now()});
+      setRoomUI('입장 승인됨 ✓','on');
+      clearInterval(roomStatusTimer);roomStatusTimer=setInterval(sendRoomStatus,2000);
+      await sendRoomStatus();await handlePresenceSync();
+    }else{
+      setRoomUI('방장이 입장을 거절했어','wait');
+    }
+  })
+  .on('broadcast',{event:'room-full'},({payload})=>{
+    if(payload&&payload.to===roomClientId)setRoomUI('이 방은 이미 4명이야','wait');
+  })
+  .on('broadcast',{event:'room-closed'},async ({payload})=>{
+    if(!isRoomHost&&payload&&payload.from===roomHostId){
+      alert('방장이 방을 종료했어.');
+      await leaveStudyRoom(false);
+    }
+  })
+  .on('broadcast',{event:'webrtc'},async ({payload})=>{await handleWebRTCSignal(payload)})
+  .on('broadcast',{event:'study-status'},({payload})=>{
+    if(!roomJoined||!payload||payload.from===roomClientId)return;
+    const ids=approvedParticipantIds();
+    if(ids.has(payload.from))updateRemoteCard(payload.from,payload);
+  })
+  .on('presence',{event:'sync'},()=>handlePresenceSync())
+  .on('presence',{event:'leave'},()=>handlePresenceSync())
+  .subscribe(async status=>{
+    if(status!=='SUBSCRIBED')return;
+    if(asHost){
+      roomJoined=true;hostApprovedIds.clear();
+      await roomChannel.track({id:roomClientId,nickname:roomNick(),approved:true,host:true,joinedAt:Date.now()});
+      setRoomUI('방 생성 완료 · 친구 입장 요청을 기다리는 중','on');
+      clearInterval(roomStatusTimer);roomStatusTimer=setInterval(sendRoomStatus,2000);
+      await sendRoomStatus();updateRoomCount();
+    }else{
+      roomJoined=false;
+      await broadcastRaw('join-request',{nickname:roomNick(),requestedAt:Date.now()});
+      setRoomUI('방장 승인 기다리는 중…','wait');
+      // 재전송 1회: 방장이 채널에 조금 늦게 붙어있는 경우 대비
+      setTimeout(()=>{if(roomChannel&&!roomJoined)broadcastRaw('join-request',{nickname:roomNick(),requestedAt:Date.now()})},1800);
+    }
+  });
+}
+async function handlePresenceSync(){
+ if(!roomChannel)return;
+ const people=approvedPresence();
+ updateRoomCount();
+
+ // 방장 식별
+ const host=people.find(x=>x.host===true);
+ if(host)roomHostId=host.id;
+
+ // 승인된 참가자 외 카드는 정리
+ const activeIds=new Set(people.map(x=>x.id).filter(id=>id!==roomClientId));
+ for(const peerId of [...peerConnections.keys()]){
+  if(!activeIds.has(peerId))await closePeer(peerId);
+ }
+ document.querySelectorAll('[id^="peerCard_"]').forEach(el=>{
+  const id=el.id.slice('peerCard_'.length);
+  if(!activeIds.has(id))removeRemoteCard(id);
+ });
+
+ if(!roomJoined)return;
+
+ for(const peer of people){
+  if(peer.id===roomClientId)continue;
+  ensureRemoteCard(peer.id,peer.nickname,peer.host);
+  await ensurePeer(peer.id);
+  // 한 쌍에서 ID가 작은 쪽만 offer를 생성 → 충돌 방지
+  if(roomClientId.localeCompare(peer.id)<0){
+   const ctx=peerConnections.get(peer.id);
+   if(ctx&&ctx.pc.signalingState==='stable'&&!ctx.offered){
+    ctx.offered=true;
+    await makeOfferTo(peer.id);
+   }
+  }
+ }
+ await sendRoomStatus();
+
+ if(!isRoomHost&&roomHostId&&!activeIds.has(roomHostId)){
+  setRoomUI('방장 연결이 끊겼어','wait');
+ }
+}
+async function ensurePeer(peerId){
+ if(peerConnections.has(peerId))return peerConnections.get(peerId);
+ const pc=new RTCPeerConnection({
+  iceServers:[
+   {urls:'stun:stun.l.google.com:19302'},
+   {urls:'stun:stun1.l.google.com:19302'}
+  ]
+ });
+ const ctx={pc,sender:null,pendingIce:[],offered:false};
+ peerConnections.set(peerId,ctx);
+
+ if(stream){
+  const track=stream.getVideoTracks()[0];
+  if(track){
+   ctx.sender=pc.addTrack(track,stream);
+   if(!videoShareEnabled)await ctx.sender.replaceTrack(null);
+  }
+ }
+ pc.ontrack=e=>{
+  ensureRemoteCard(peerId,remoteStates.get(peerId)?.nickname||'친구',remoteStates.get(peerId)?.host||false);
+  const v=document.getElementById('peerVideo_'+peerId);
+  if(v&&e.streams&&e.streams[0])v.srcObject=e.streams[0];
+ };
+ pc.onicecandidate=e=>{
+  if(e.candidate)broadcastRaw('webrtc',{to:peerId,kind:'ice',candidate:e.candidate.toJSON()});
+ };
+ pc.onconnectionstatechange=()=>{
+  const a=document.getElementById('peerActivity_'+peerId);
+  if(pc.connectionState==='connected'&&a&&!remoteStates.has(peerId))a.textContent='영상 연결됨';
+  if(['failed','disconnected','closed'].includes(pc.connectionState)&&a)a.textContent='영상 연결 끊김';
+ };
+ return ctx;
+}
+async function makeOfferTo(peerId){
+ const ctx=await ensurePeer(peerId);
+ try{
+  await ctx.pc.setLocalDescription(await ctx.pc.createOffer());
+  await broadcastRaw('webrtc',{to:peerId,kind:'description',description:ctx.pc.localDescription.toJSON()});
+ }catch(e){ctx.offered=false}
+}
+async function handleWebRTCSignal(msg){
+ if(!roomJoined||!msg||msg.from===roomClientId||msg.to!==roomClientId)return;
+ const ids=approvedParticipantIds();
+ if(!ids.has(msg.from))return;
+ const peerId=msg.from,ctx=await ensurePeer(peerId),pc=ctx.pc;
+ try{
+  if(msg.kind==='description'&&msg.description){
+   await pc.setRemoteDescription(msg.description);
+   while(ctx.pendingIce.length){
+    const c=ctx.pendingIce.shift();
+    try{await pc.addIceCandidate(c)}catch(e){}
+   }
+   if(msg.description.type==='offer'){
+    await pc.setLocalDescription(await pc.createAnswer());
+    await broadcastRaw('webrtc',{to:peerId,kind:'description',description:pc.localDescription.toJSON()});
+   }
+  }else if(msg.kind==='ice'&&msg.candidate){
+   if(pc.remoteDescription)await pc.addIceCandidate(msg.candidate);
+   else ctx.pendingIce.push(msg.candidate);
+  }
+ }catch(e){}
+}
+async function closePeer(peerId){
+ const ctx=peerConnections.get(peerId);
+ if(ctx){try{ctx.pc.close()}catch(e){}peerConnections.delete(peerId)}
+ removeRemoteCard(peerId);
+}
+async function closeAllPeers(){
+ for(const id of [...peerConnections.keys()])await closePeer(id);
+}
+async function leaveStudyRoom(announce=true){
+ clearInterval(roomStatusTimer);roomStatusTimer=null;
+ if(roomChannel){
+  if(isRoomHost&&announce){
+   try{await broadcastRaw('room-closed',{})}catch(e){}
+  }
+  try{if(roomJoined)await roomChannel.untrack()}catch(e){}
+  try{await sb.removeChannel(roomChannel)}catch(e){}
+ }
+ roomChannel=null;roomJoined=false;roomCodeActive='';roomHostId=null;
+ isRoomHost=false;hostApprovedIds.clear();pendingJoinRequests.clear();
+ renderJoinRequests();await closeAllPeers();
+ setRoomUI('방에 들어가 있지 않음','wait');
+ updateRoomCount();updateMyRoomCard();
+}
+async function toggleVideoShare(){
+ videoShareEnabled=!videoShareEnabled;
+ const track=stream&&stream.getVideoTracks()[0];
+ for(const ctx of peerConnections.values()){
+  if(ctx.sender){
+   try{await ctx.sender.replaceTrack(videoShareEnabled?track:null)}catch(e){}
+  }
+ }
+ const b=document.getElementById('shareVideoBtn');
+ if(b)b.textContent=videoShareEnabled?'📹 영상 공유 ON':'🚫 영상 공유 OFF';
+ await sendRoomStatus();
+}
+function initRoomUI(){
+ const nick=currentAccountNickname()||localStorage.getItem(ROOM_NAME_KEY)||'';
+ const n=document.getElementById('roomNickname');if(n)n.value=nick;
+ const h=getInviteRoomFromHash();if(h){const c=document.getElementById('roomCode');if(c)c.value=h}
+ updateMyRoomCard();renderAccountUI();renderJoinRequests();
+}
+setTimeout(initRoomUI,0);
+
+
+
+/* iOS/iPadOS keyboard helper - stable version */
+let keyboardFocusedField=null;
+let keyboardScrollTimer=null;
+
+function fieldNeedsVisibilityFix(el){
+ if(!el||!window.visualViewport)return false;
+ const r=el.getBoundingClientRect();
+ const vv=window.visualViewport;
+ const topLimit=vv.offsetTop+70;
+ const bottomLimit=vv.offsetTop+vv.height-90;
+ return r.top<topLimit || r.bottom>bottomLimit;
+}
+
+function gentlyRevealFocusedField(){
+ const el=keyboardFocusedField;
+ if(!el||!document.contains(el))return;
+ if(!fieldNeedsVisibilityFix(el))return;
+ try{
+  el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'auto'});
+ }catch(e){
+  el.scrollIntoView(false);
+ }
+}
+
+document.addEventListener('focusin',e=>{
+ if(e.target&&e.target.matches&&e.target.matches('input,textarea,select')){
+  keyboardFocusedField=e.target;
+  clearTimeout(keyboardScrollTimer);
+  // Wait for Safari's keyboard animation to mostly finish, then correct only if needed.
+  keyboardScrollTimer=setTimeout(gentlyRevealFocusedField,420);
+ }
+});
+
+document.addEventListener('focusout',e=>{
+ if(e.target===keyboardFocusedField){
+  clearTimeout(keyboardScrollTimer);
+  setTimeout(()=>{
+   if(document.activeElement!==e.target)keyboardFocusedField=null;
+  },120);
+ }
+});
+
+if(window.visualViewport){
+ let keyboardResizeTimer=null;
+ const syncKeyboardViewport=()=>{
+  const vv=window.visualViewport;
+  const gap=Math.max(0,window.innerHeight-vv.height-vv.offsetTop);
+  document.documentElement.style.setProperty('--keyboard-gap',Math.round(gap)+'px');
+  document.body.classList.toggle('keyboard-open',gap>80);
+
+  // Debounced one-shot correction after resizing; do NOT react to viewport scroll.
+  clearTimeout(keyboardResizeTimer);
+  keyboardResizeTimer=setTimeout(()=>{
+   if(keyboardFocusedField)gentlyRevealFocusedField();
+  },220);
+ };
+ window.visualViewport.addEventListener('resize',syncKeyboardViewport);
+}
+
+
+window.addEventListener('beforeunload',()=>{try{if(roomChannel)roomChannel.unsubscribe()}catch(e){}if(stream)stream.getTracks().forEach(t=>t.stop())});
+ensureStudyConfig();ensureLegacyVisibility();ensureSubjectConfig();ensureWeeklyRoutine();ensureUIConfig();repairLegacyBackgroundTimeBug();applySkin();render();renderAccountUI();fillStudySettingsForm();updateCalStatus();updatePartialPhoneStatus();cloudLoad();
+</script>
+</body>
+</html>
